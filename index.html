@@ -11,11 +11,10 @@
         <script>
 
             function setup() {
-              // Make the canvas the size of the mobile device screen
-              var cnv = createCanvas(windowWidth, windowHeight);
-              cnv.parent('canvas')
-              background(0);
-
+                // Make the canvas the size of the mobile device screen
+                let canvas = createCanvas(windowWidth, windowHeight);
+                canvas.parent('touch-me');
+                background(0);
             }
 
             var bgColor = "black";
@@ -30,73 +29,65 @@
 
             $(function() {
 
-                var touchMe = document.getElementById('canvas');
+                $('#touch-me').touchy(true, {
 
-                Touchy(touchMe, true, {
-                  one: function (hand, finger) {
-                    // Full touchy style event system, run only when exactly one finger
-                    // on screen.
+                    one: function(hand, finger) {
 
-                    // In these cases 'hand' is only alive for the duration of touches that
-                    // have the exact number of simulataneous touches (unlike in the
-                    // previous example).
+                        let previous;
 
-                    finger.on('start', function (point) {
-                      // 'point' is a coordinate of the following form:
-                      // { id: <string>, x: <number>, y: <number>, time: <date> }
+                        finger.on('start', function(point) {
 
-                      // setup draw
-                      strokeWeight(penWeight);
-                      stroke(penColor);
+                            // Set up draw
+                            strokeWeight(penWeight);
+                            stroke(penColor);
 
-                      // save the first point (but don't draw)
-                      previous = point;
+                            // Save the first point (but don't draw)
+                            previous = point;
 
-                    });
+                        });
 
-                    finger.on('move', function(point){
-                      line(previous.x, previous.y, point.x, point.y);
-                      previous = point;
-                    })
+                        finger.on('move', function(point) {
+                            line(previous.x, previous.y, point.x, point.y);
+                            previous = point;
+                        });
+                    },
 
+                    two: function(hand, finger1, finger2) {
 
-                  },
+                        let previous;
 
-                  two: function (hand, finger1, finger2) {
-                    // Only run when exactly two fingers on screen
-                    finger1.on('start', function (point) {
-                      // 'point' is a coordinate of the following form:
-                      // { id: <string>, x: <number>, y: <number>, time: <date> }
+                        finger1.on('start', function (point) {
 
-                      // setup eraser around finger 1
-                      strokeWeight(eraserWeight);
-                      stroke(bgColor);
+                            // Set up eraser around finger 1
+                            strokeWeight(eraserWeight);
+                            stroke(bgColor);
 
-                      // save the first point (but don't draw)
-                      previous = point;
+                            // Save the first point (but don't draw)
+                            previous = point;
 
-                    });
+                        });
 
-                    finger1.on('move', function(point){
-                      line(previous.x, previous.y, point.x, point.y);
-                      previous = point;
-                    })
-                  },
+                        finger1.on('move', function(point){
+                            line(previous.x, previous.y, point.x, point.y);
+                            previous = point;
+                        });
+                    },
 
-                  four: function(hand, finger1, finger2, finger3, finger4) {
+                    four: function(hand, finger1, finger2, finger3, finger4) {
                     
-                    finger2.on('start', function(point){
-                      previous = point;
-                    })
+                        let previous;
 
-                    finger2.on('move', function(point){
-                        strokeWeight(bulkEraserWeight);
-                        stroke(bgColor);
-                        line(0,0,1920,1080);
-                    });
-                  }
+                        finger2.on('start', function(point) {
+                            previous = point;
+                        });
+
+                        finger2.on('move', function(point) {
+                            strokeWeight(bulkEraserWeight);
+                            stroke(bgColor);
+                            line(0, 0, 1920, 1080);
+                        });
+                    }
                 });
-
             });
 
         </script>
@@ -118,6 +109,6 @@
 
     </head>
     <body>
-        <div id="canvas"></div>
+        <div id="touch-me"></div>
     </body>
 </html>
