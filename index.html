@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+
+<html>
+
+    <head>
+
+		<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.1/p5.js"></script>
+        <script src="touchy.js"></script>
+
+        <script>
+
+            function setup() {
+              // Make the canvas the size of the mobile device screen
+              var cnv = createCanvas(windowWidth, windowHeight);
+              cnv.parent('canvas')
+              background(0);
+
+            }
+
+            var bgColor = "black";
+            var penColor = "white";
+            var penWeight = 4;
+            var eraserWeight = 200;
+            var bulkEraserWeight = 1000;
+            var previous = [];
+            var current = [];
+
+            Touchy.stopWindowBounce();
+
+            $(function() {
+
+                var touchMe = document.getElementById('canvas');
+
+                Touchy(touchMe, true, {
+                  one: function (hand, finger) {
+                    // Full touchy style event system, run only when exactly one finger
+                    // on screen.
+
+                    // In these cases 'hand' is only alive for the duration of touches that
+                    // have the exact number of simulataneous touches (unlike in the
+                    // previous example).
+
+                    finger.on('start', function (point) {
+                      // 'point' is a coordinate of the following form:
+                      // { id: <string>, x: <number>, y: <number>, time: <date> }
+
+                      // setup draw
+                      strokeWeight(penWeight);
+                      stroke(penColor);
+
+                      // save the first point (but don't draw)
+                      previous = point;
+
+                    });
+
+                    finger.on('move', function(point){
+                      line(previous.x, previous.y, point.x, point.y);
+                      previous = point;
+                    })
+
+
+                  },
+
+                  two: function (hand, finger1, finger2) {
+                    // Only run when exactly two fingers on screen
+                    finger1.on('start', function (point) {
+                      // 'point' is a coordinate of the following form:
+                      // { id: <string>, x: <number>, y: <number>, time: <date> }
+
+                      // setup eraser around finger 1
+                      strokeWeight(eraserWeight);
+                      stroke(bgColor);
+
+                      // save the first point (but don't draw)
+                      previous = point;
+
+                    });
+
+                    finger1.on('move', function(point){
+                      line(previous.x, previous.y, point.x, point.y);
+                      previous = point;
+                    })
+                  },
+
+                  four: function(hand, finger1, finger2, finger3, finger4) {
+                    
+                    finger2.on('start', function(point){
+                      previous = point;
+                    })
+
+                    finger2.on('move', function(point){
+                        strokeWeight(bulkEraserWeight);
+                        stroke(bgColor);
+                        line(0,0,1920,1080);
+                    });
+                  }
+                });
+
+            });
+
+        </script>
+
+        <style>
+    
+            html, body {
+                height: 100%;
+            }
+
+            body {
+                margin: 0;
+                overflow: hidden;
+            }
+
+        </style>
+
+        <title>CS50 Draw</title>
+
+    </head>
+    <body>
+        <div id="canvas"></div>
+    </body>
+</html>
