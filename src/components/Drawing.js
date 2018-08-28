@@ -158,10 +158,10 @@ class Drawing extends Component {
     return (
       <div>
 
-      <div id="topLeftHotSpot" style={{position: 'fixed', top:0, left:0, zIndex: 1000, width:100, height:100, backgroundColor: (this.state.hotSpotColor)}} onClick={this.handleTopLeftHotSpot}></div>
-      <div id="topRightHotSpot" style={{position: 'fixed', top:0, left:(window.innerWidth - 100), zIndex: 1000, width:100, height:100, backgroundColor: (this.state.hotSpotColor)}} onClick={this.handleTopRightHotSpot}></div>
-      <div id="bottomLeftHotSpot" style={{position: 'fixed', bottom:0, left:0, zIndex: 1000, width:100, height:100, backgroundColor: (this.state.hotSpotColor)}} onClick={this.handleBottomLeftHotSpot}></div>
-      <div id="bottomRightHotSpot" style={{position: 'fixed', bottom:0, left:(window.innerWidth - 100), zIndex: 1000, width:100, height:100, backgroundColor: (this.state.hotSpotColor)}} onClick={this.handleBottomRightHotSpot}></div>
+      <div id="topLeftHotSpot" style={{position: 'fixed', top:0, left:0, zIndex: 1000, width:100, height:100, backgroundColor: (this.state.hotSpotColor)}} ></div>
+      <div id="topRightHotSpot" style={{position: 'fixed', top:0, left:(window.innerWidth - 100), zIndex: 1000, width:100, height:100, backgroundColor: (this.state.hotSpotColor)}}></div>
+      <div id="bottomLeftHotSpot" style={{position: 'fixed', bottom:0, left:0, zIndex: 1000, width:100, height:100, backgroundColor: (this.state.hotSpotColor)}}></div>
+      <div id="bottomRightHotSpot" style={{position: 'fixed', bottom:0, left:(window.innerWidth - 100), zIndex: 1000, width:100, height:100, backgroundColor: (this.state.hotSpotColor)}}></div>
 
       <div hidden={this.state.hideToolBar} id="toolBar" style={{position: 'fixed', left:(window.innerWidth/2-270), zIndex: 1100, paddingLeft:30, paddingTop:15, color:'white', opacity: 0.1}} unselectable="on">
       <span>&nbsp;&nbsp;&nbsp;</span>
@@ -228,8 +228,6 @@ class Drawing extends Component {
                  if (!this.state.onGestureOverride) {
                    return;
                  };
-
-                 console.log(gestureStatus)
 
                  // trigger scale
                  if (Math.abs(gestureStatus.scale - 1) > 0.2) {
