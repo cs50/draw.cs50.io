@@ -194,14 +194,14 @@ class Drawing extends Component {
                    return;
                  };
                  this._undo();
-               }};
+               }}
 
                onSwipeRight={(gestureStatus) => {
                  if (!this.state.onGestureOverride) {
                    return;
                  };
                  this._redo();
-               }};
+               }}
                >
 
       <div id="sketchField" style={{zIndex: 1}}>
