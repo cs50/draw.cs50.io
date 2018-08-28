@@ -198,15 +198,6 @@ class Drawing extends Component {
                    return;
                  };
 
-                 if (gestureStatus.startTouches.length >= 7) {
-                   this._clear();
-                   this.setState({lineColor: 'transparent'});
-                   this.setState({lineWidth: lineWidthBuffer});
-                   document.getElementById('activeSketch').style.transform = "scale(1, 1)";
-                   window.scrollTo(0,0);
-                   return;
-                 }
-
                  if (gestureStatus.startTouches.length === 5) {
                    this.setState({lineColor: 'transparent'});
                    if (this.state.onGestureOverride) {
@@ -226,6 +217,15 @@ class Drawing extends Component {
 
                onRotateMove={(gestureStatus) => {
                  if (!this.state.onGestureOverride) {
+                   return;
+                 };
+
+                 if (gestureStatus.startTouches.length > 7 && gestureStatus.moveStatus.x < -30) {
+                   this._clear();
+                   this.setState({lineColor: 'transparent'});
+                   this.setState({lineWidth: lineWidthBuffer});
+                   document.getElementById('activeSketch').style.transform = "scale(1, 1)";
+                   window.scrollTo(0,0);
                    return;
                  };
 
