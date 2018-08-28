@@ -185,14 +185,14 @@ class Drawing extends Component {
 
                onRotateStart={(gestureStatus) => {
 
-                 // erase
+                 // set lineColor to black for 3-finger erase mode
+                 // though 2 finger will also erase but it is drawing white line
                  if (gestureStatus.startTouches.length === 2) {
                    this.setState({lineColor: 'black'});
-                   this.setState({lineWidth: this.state.lineWidth + 30});
                    return;
                  };
 
-                 // preparation
+                 // set lineColor to transparent for 5-finger mode
                  if (gestureStatus.startTouches.length === 4) {
                    this.setState({lineColor: 'transparent'});
                    return;
@@ -210,7 +210,6 @@ class Drawing extends Component {
                    } else {
                      this.setState({onGestureOverride: true});
                      document.getElementById('activeSketch').style.zIndex = -20;
-                     // document.getElementById('activeSketch').style.opacity = 0.5;
                    };
                  }
                }}
