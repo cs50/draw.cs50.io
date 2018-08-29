@@ -1,166 +1,216 @@
 <!DOCTYPE html>
-
+<!-- note, disable touch overscroll! https://www.addictivetips.com/web/disable-swipe-to-go-back-in-chrome/ -->
 <html>
 
     <head>
+    	<title>Draw50</title>
+    	<meta name="viewport" content="width=device-width, user-scalable=no">
+    	<style>
+    		html,
+			body {
+			    height: 100%;
+			    width: 100%;
+			    margin:0px;
+			    overflow: hidden;
+			}
 
+			canvas {
+				background:black;
+			}
+			/* Scale canvas with resize attribute to full size */
+			canvas[resize] {
+			    width: 100%;
+			    height: 100%;
+			}
+			
+			button.corner {
+				height:100px;
+				width:100px;
+			}
+			button.hidden {
+				position:absolute;
+				background: transparent;
+			    border: none !important;
+			    font-size:0;
+			    outline:none;
+			}
+			button.top-left {
+				top:0px;
+				left:0px;
+			}
+			button.top-right {
+				top:0px;
+				right:0px;
+			}
+			button.bottom-left {
+				bottom:0px;
+				left:0px;
+			}
+			button.bottom-right {
+				bottom:0px;
+				right:0px;
+			}
+    	</style>
 		<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.1/p5.js"></script>
-        <script src="touchy.js"></script>
-
-        <script>
-            var wheight = $(window).height();
-            var wwidth = $(window).width();
-
-            function setup() {
-               
-                // Make the canvas the size of the mobile device screen
-                let canvas = createCanvas(windowWidth, windowHeight);
-                canvas.parent('touch-me');
-                background(0);
-                
-            }
-
-            function doubleClicked(){
-                fullscreen(true);
-                redraw();
-            }
-
-            function windowResized() {
-                resizeCanvas(windowWidth, windowHeight);
-                background(0);
-                redraw();
-            }
-
-            // default attributes
-            var bgColor = "black";
-            var penColor = "white";
-
-            var penWeight = Math.ceil(wwidth / 500.0);
-            var eraserWeight = wwidth / 10.0;
-            var bulkEraserWeight = wheight / 2.0;
-
-
-            var paths = [];
+		<script src="touchy.js"></script>
+        <script src="paper-full.js"></script>
             
-            // p5js draw function
-            function draw() {
-                // draw function for p5
-                for (let i = 0; i < paths.length; i++) {
-                    if (paths[i] == 0 || paths[i].points.length < 2) {
-                        continue;
-                    }
-                    paths[i].display();
-                }
-            }
+        <script type="text/javascript" canvas="touch-me">
+           
+          	// defaults
+            var path;
+            var paths = [];
+            var hidden = [];
+            var undoAll = false;
+            var startEraseTime = new Date();
+            var endEraseTime = new Date();
 
+            // function to re-do undo last draw or erase
+            function undo(){
+            	// stop if there is nothing left to undo
+            	if (paths.length < 1) {
+            		return;
+            	}
+
+            	// swap arrays and make element invisible
+        		hidden.push(paths.pop());
+        		hidden[hidden.length - 1].visible = false;
+            	
+        	}
+
+        	// function to redo last undo
+        	function redo(){
+        		if (hidden.length < 1) {
+            		return;
+            	}
+
+            	// swap arrays and make element visible
+        		paths.push(hidden.pop());
+        		paths[paths.length - 1].visible = true;
+        	}
+          
+        	// default behavior prevention
             Touchy.stopWindowBounce();
 
+            // main function on page load
             $(function() {
 
+	            // setup paper.js
+	            var canvas = document.getElementById('touch-me');
+	            paper.setup(canvas);
+
+	            // initialize the touch portion
                 $('#touch-me').touchy(true, {
 
+                	// handle one finger
                     one: function(hand, finger) {
 
+                    	// setup a new path and start recording our first line
                         finger.on('start', function(point) {
                             
-                            // setup a new line
-                            paths.push(new Path());
+                            // Create a new path and set its stroke color to white:
+                            path = new paper.Path({
+                                segments: [point],
+                                strokeColor: 'white',
+                                strokeWidth: 7,
+                                strokeCap: 'round',
+                                // Select the path, so we can see its segment points:
+                                fullySelected: false
+                            });
+
+                            paths.push(path);
                         });
 
+                        // keep track of the line as we move our finger
                         finger.on('move', function(point) {
                             // add the current point to our existing line
-                            paths[paths.length - 1].addPoint(point.x, point.y);
+                            paths[paths.length - 1].add(point);
+                        });
+
+                        // when the finger comes up, simplify the path (smooth)
+                        finger.on('end', function(){
+                            paths[paths.length - 1].simplify(8);  
                         });
                     },
 
+                    // handle 2 fingers for erasing
                     two: function(hand, finger1, finger2) {
-
-                        let previous;
-
+                       
                         finger1.on('start', function (point) {
+                        	// Create a new path and set its stroke color to black
+                            path = new paper.Path({
+                                segments: [point],
+                                strokeColor: 'black',
+                                strokeWidth: 80,
+                                strokeCap: 'round',
+                                fullySelected: false
+                            });
 
-                            // Set up eraser around finger 1
-                            strokeWeight(eraserWeight);
-                            stroke("red");
-
-                            // Save the first point (but don't draw)
-                            previous = point;
+                            // store the line
+                            paths.push(path);
 
                         });
 
+                        // record points as we continue to black-out
                         finger1.on('move', function(point){
-                            line(previous.x, previous.y, point.x, point.y);
-                            previous = point;
+                            // add the current point to our existing line
+                            paths[paths.length - 1].add(point);
+                        });
+
+
+                        // handle any cleanup data
+                        finger1.on('end', function(){
+                            
                         });
                     },
 
-                    four: function(hand, finger1, finger2, finger3, finger4) {
+                    // use 5 fingers for > 1 second to clear the screen *currently no undo from this*
+                    five: function(hand, finger1, finger2, finger3, finger4, finger5) {
                     
-                        let previous;
-
-                        finger2.on('start', function(point) {
-                            previous = point;
+                        // handle clear screen
+                        finger5.on('start', function(point) {
+                             // keep track of 5 fingers
+                             startEraseTime = new Date();
                         });
 
-                        finger2.on('move', function(point) {
-                            strokeWeight(bulkEraserWeight);
-                            stroke(bgColor);
-                            line(0, 0, 1920, 1080);
+                        // assume swipe moves, a tap with 5 fingers won't delete everything
+                        finger5.on('move', function(point) {
+                        	endEraseTime = new Date();
+
+                        	// check if the user has been holding the screen for 2 seconds or longer
+                        	if (endEraseTime.getTime() - startEraseTime.getTime() > 1000) {
+
+                        		// swap arrays
+                        		hidden = paths;
+                        		paths = [];
+
+                        		// make all paths invisible
+                        		for (var i = 0; i < hidden.length; i++) {
+                        			console.log("hiding", hidden[i]);
+                        			hidden[i].visible = false;
+                        		}
+                        	}
                         });
+
+                        // reset timers
+                        finger5.on('end', function(){
+                        	startEraseTime = new Date("01/01/1980");
+                        	endEraseTime = new Date("01/01/1980");
+                        	undoAll = true;
+                        })
                     }
                 });
             });
 
-            function Path(color = "white") {
-                // keep trak of the points on this line
-                this.points = [];
-
-                // keep track of the color
-                this.color = color;
-            }
-
-            // function to add point to a path
-            Path.prototype.addPoint = function(x, y) {
-                this.points.push({x: x, y: y});
-            }
-
-            Path.prototype.display = function() {
-
-                // setup the line
-                noFill();
-                strokeWeight(penWeight);
-                stroke(this.color);
-                beginShape();
-
-                // iterate over all of the points on this line, add a vertex
-                for (let i = 0; i < this.points.length; i++) {
-                    curveVertex(this.points[i].x, this.points[i].y);
-                }
-
-                // end the line
-                endShape();
-            }
+    
 
         </script>
-
-        <style>
-    
-            html, body {
-                height: 100%;
-            }
-
-            body {
-                margin: 0;
-                overflow: hidden;
-            }
-
-        </style>
-
-        <title>CS50 Draw</title>
-
-    </head>
-    <body>
-        <div id="touch-me"></div>
-    </body>
+</head>
+<body>
+	<button class="top-left hidden corner"onclick="undo();"></button>
+	<button class="top-right hidden corner"onclick="redo();"></button>
+	<button class="bottom-left hidden corner"onclick="undo();"></button>
+	<button class="bottom-right hidden corner"onclick="redo();"></button>
+    <canvas id="touch-me" resize></canvas>
+</body>
 </html>
