@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+<title>Draw50</title>
+<meta name="Draw50" content="A simple drawing web app">
+<link rel="shortcut icon" src="favicon.ico"/>
 <!-- Load the Paper.js library -->
 <link rel="stylesheet" src="css/main.css">
 <script type="text/javascript" src="js/paper.js"></script>
@@ -28,6 +31,8 @@
     ]
   });
 
+  // specifically deal with drawing dot scenarior, because we no longer trigger
+  // drawing using "onMouseDown"
   mc.on('tap', function(ev) {
     canDraw = true;
     var dot = new Path.Circle(new Point(ev.center.x,ev.center.y), 10);
@@ -35,38 +40,46 @@
     project.activeLayer.addChild(dot);
   });
 
+  // allow drawing if it is a 1-finger interaction
   mc.on('panmove', function(ev) {
     canDraw = true;
   });
 
+  // using "rotate" recognizer to detect multi-fingers situation
   mc.on("rotate", function(ev) {
 
+    // 2 fingers for erasing
     if (ev.maxPointers === 2) {
       canDraw = true;
       onErase = true;
     };
 
+    // suspending 3-finger action
     if (ev.maxPointers === 3) {
       canDraw = false;
       onErase = false;
     };
 
+    // suspending 4-finger action
     if (ev.maxPointers === 4) {
       canDraw = false;
       onErase = false;
     };
 
+    // 5 fingers for panning
     if (ev.maxPointers === 5) {
       canDraw = false;
       onErase = false;
       window.scrollBy(-ev.deltaX/20, -ev.deltaY/20);
     }
 
+    // suspending 6-finger action
     if (ev.maxPointers === 6) {
       canDraw = false;
       onErase = false;
     };
 
+    // 7+ fingers to clear canvas
     if (ev.maxPointers > 7 && Math.abs(ev.deltaTime) > 150) {
       project.activeLayer.removeChildren();
       canDraw = true;
@@ -76,9 +89,10 @@
 
   function onMouseDown(event) {};
 
+  // drawing on canvas
   function onMouseDrag(event) {
 
-    // prevent drawing for certain mode
+    // prevent drawing for certain action
     if (!canDraw) {
       return;
     };
@@ -89,7 +103,8 @@
       pathCreated = true;
     };
 
-    // two fingers erasing
+    // when erasing, switch stroke color to black can start drawing
+    // notice that we don't smooth path, because it is unnecessary
     if (onErase) {
       path.strokeColor = 'black';
       path.strokeWidth = 50;
@@ -106,19 +121,21 @@
   };
 
   function onMouseUp(event) {
+
+    // clean up path if it is not erasing
     if (!onErase) {
       path.smooth();
       path.simplify(30);
     }
     onErase = false;
-    switcher = false;
+    // create a new path for the next drawing
     path = new Path();
   };
 
   function undoPath() {
-    var length = project.activeLayer._children.length;
-    undoArray.push(project.activeLayer._children[length-2]);
-    project.activeLayer._children[length-2].remove();
+    var arrayLength = project.activeLayer._children.length;
+    undoArray.push(project.activeLayer._children[arrayLength-2]);
+    project.activeLayer._children[arrayLength-2].remove();
   }
 
   function redoPath() {
@@ -137,7 +154,6 @@
   } catch (error) {};
 
 </script>
-
 
 </head>
 <body>
