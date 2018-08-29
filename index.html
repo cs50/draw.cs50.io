@@ -13,8 +13,13 @@
 
   var path;
   var pathCreated = false;
-  var onErase = false;
   var canDraw = true;
+  var onErase = false;
+
+  var onDrawLine = false;
+  var from;
+  var to;
+
   var activeCanvas = document.getElementById('draw50Canvas');
   var undoArray = [];
   var drawDot = false;
@@ -35,7 +40,8 @@
       [Hammer.Rotate, { enable: true, pointers: 0}],
       [Hammer.Pan, { pointers: 1 }],
       [Hammer.Tap],
-      [Hammer.Pinch, { pointers: 0 }]
+      [Hammer.Pinch, { pointers: 0 }],
+      [Hammer.Press]
     ]
   });
 
@@ -43,7 +49,7 @@
   // drawing using "onMouseDown"
   mc.on('tap', function(ev) {
     canDraw = true;
-    var dot = new Path.Circle(new Point(ev.center.x,ev.center.y), 10);
+    var dot = new Path.Circle(new Point(ev.center.x - 10,ev.center.y - 30), 10);
     dot.fillColor = 'white';
     project.activeLayer.addChild(dot);
   });
@@ -52,6 +58,12 @@
   mc.on('panmove', function(ev) {
     canDraw = true;
   });
+
+  mc.on('press', function(ev) {
+    console.log("pressing");
+    onDrawLine = true;
+    from = new Point(ev.center.x, ev.center.y);
+  })
 
   // using "rotate" recognizer to detect multi-fingers situation
   mc.on("rotate", function(ev) {
@@ -115,12 +127,15 @@
       pathCreated = true;
     };
 
+    if (onDrawLine) {
+      return;
+    }
+
     // when erasing, switch stroke color to black can start drawing
     // notice that we don't smooth path, because it is unnecessary
     if (onErase) {
-      console.log("drawing black")
       path.strokeColor = 'black';
-      path.strokeWidth = 50;
+      path.strokeWidth = 60;
       path.add(event.point);
       return;
     };
@@ -136,10 +151,22 @@
   function onMouseUp(event) {
 
     // clean up path if it is not erasing
-    if (!onErase) {
-      path.smooth();
-      path.simplify(30);
+
+    if (onDrawLine) {
+      to = new Point(event.point);
+      path = new Path.Line(from, to);
+      path.strokeWidth = 10;
+      path.strokeColor = 'white';
+      onDrawLine = false;
     }
+
+    if (!onErase) {
+      try {
+        path.smooth();
+        path.simplify(30);
+      } catch (error) {};
+    }
+
     onErase = false;
 
     // //Storing data:
@@ -180,6 +207,6 @@
 <body>
   <button id="undo">Tap this to Undo </button>
   <button id="redo">Tap this to Redo </button>
-  <canvas id="draw50Canvas" width=1920 height=1080 style="background-color: black"></canvas>
+  <canvas id="draw50Canvas" width=1920 height=3240 style="background-color: black"></canvas>
 </body>
 </html>
