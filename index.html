@@ -18,6 +18,7 @@
   var activeCanvas = document.getElementById('draw50Canvas');
   var undoArray = [];
   var drawDot = false;
+  var didClearCanvas = false;
 
   // create a simple instance
   // by default, it only adds horizontal recognizers
@@ -71,7 +72,7 @@
       canDraw = false;
       onErase = false;
       window.scrollBy(-ev.deltaX/20, -ev.deltaY/20);
-    }
+    };
 
     // suspending 6-finger action
     if (ev.maxPointers === 6) {
@@ -83,7 +84,9 @@
     if (ev.maxPointers > 7 && Math.abs(ev.deltaTime) > 150) {
       project.activeLayer.removeChildren();
       canDraw = true;
-    }
+      didClearCanvas = true;
+      pathCreated = false;
+    };
 
   });
 
@@ -97,6 +100,8 @@
       return;
     };
 
+    didClearCanvas = false;
+
     // create path for the very first draw
     if (!pathCreated) {
       path = new Path();
@@ -106,6 +111,7 @@
     // when erasing, switch stroke color to black can start drawing
     // notice that we don't smooth path, because it is unnecessary
     if (onErase) {
+      console.log("drawing black")
       path.strokeColor = 'black';
       path.strokeWidth = 50;
       path.add(event.point);
