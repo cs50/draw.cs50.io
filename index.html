@@ -19,6 +19,13 @@
   var undoArray = [];
   var drawDot = false;
   var didClearCanvas = false;
+  var pathArray = {};
+
+  // //Retrieving data:
+  // try {
+  //   var resumePath
+  //   resumePath = localStorage.getItem("draw50");
+  // } catch (error) {console.log(error)}
 
   // create a simple instance
   // by default, it only adds horizontal recognizers
@@ -134,19 +141,27 @@
       path.simplify(30);
     }
     onErase = false;
+
+    // //Storing data:
+    // localStorage.setItem('draw50', JSON.stringify(project.activeLayer._children));
+
     // create a new path for the next drawing
     path = new Path();
   };
 
   function undoPath() {
-    var arrayLength = project.activeLayer._children.length;
-    undoArray.push(project.activeLayer._children[arrayLength-2]);
-    project.activeLayer._children[arrayLength-2].remove();
+    try {
+      var arrayLength = project.activeLayer._children.length;
+      undoArray.push(project.activeLayer._children[arrayLength-2]);
+      project.activeLayer._children[arrayLength-2].remove();
+    } catch (error) {}
   }
 
   function redoPath() {
-    project.activeLayer.addChild(undoArray[undoArray.length - 1]);
-    undoArray.pop();
+    try {
+      project.activeLayer.addChild(undoArray[undoArray.length - 1]);
+      undoArray.pop();
+    } catch (error) {}
   }
 
   try {
