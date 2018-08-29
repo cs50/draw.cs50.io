@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<!-- Load the Paper.js library -->
+<link rel="stylesheet" src="css/main.css">
+<script type="text/javascript" src="js/paper.js"></script>
+<script type="text/javascript" src="js/hammer.min.js"></script>
+<!-- Define inlined PaperScript associate it with myCanvas -->
+<script type="text/paperscript" canvas="draw50Canvas">
+
+  var path;
+  var pathCreated = false;
+  var onErase = false;
+  var canDraw = true;
+  var activeCanvas = document.getElementById('draw50Canvas');
+  var undoArray = [];
+  var drawDot = false;
+
+  // create a simple instance
+  // by default, it only adds horizontal recognizers
+  var mc = new Hammer.Manager(activeCanvas, {
+    recognizers: [
+      // RecognizerClass, [options], [recognizeWith, ...], [requireFailure, ...]
+      [Hammer.Rotate, { enable: true, pointers: 0}],
+      [Hammer.Pan, { pointers: 1 }],
+      [Hammer.Tap],
+      [Hammer.Pinch, { pointers: 0 }]
+    ]
+  });
+
+  mc.on('tap', function(ev) {
+    canDraw = true;
+    var dot = new Path.Circle(new Point(ev.center.x,ev.center.y), 10);
+    dot.fillColor = 'white';
+    project.activeLayer.addChild(dot);
+  });
+
+  mc.on('panmove', function(ev) {
+    canDraw = true;
+  });
+
+  mc.on("rotate", function(ev) {
+
+    if (ev.maxPointers === 2) {
+      canDraw = true;
+      onErase = true;
+    };
+
+    if (ev.maxPointers === 3) {
+      canDraw = false;
+      onErase = false;
+    };
+
+    if (ev.maxPointers === 4) {
+      canDraw = false;
+      onErase = false;
+    };
+
+    if (ev.maxPointers === 5) {
+      canDraw = false;
+      onErase = false;
+      window.scrollBy(-ev.deltaX/20, -ev.deltaY/20);
+    }
+
+    if (ev.maxPointers === 6) {
+      canDraw = false;
+      onErase = false;
+    };
+
+    if (ev.maxPointers > 7 && Math.abs(ev.deltaTime) > 150) {
+      project.activeLayer.removeChildren();
+      canDraw = true;
+    }
+
+  });
+
+  function onMouseDown(event) {};
+
+  function onMouseDrag(event) {
+
+    // prevent drawing for certain mode
+    if (!canDraw) {
+      return;
+    };
+
+    // create path for the very first draw
+    if (!pathCreated) {
+      path = new Path();
+      pathCreated = true;
+    };
+
+    // two fingers erasing
+    if (onErase) {
+      path.strokeColor = 'black';
+      path.strokeWidth = 50;
+      path.add(event.point);
+      return;
+    };
+
+    // regular drawing
+    path.strokeColor = 'white';
+    path.strokeWidth = 10;
+    path.add(event.point);
+    path.smooth();
+
+  };
+
+  function onMouseUp(event) {
+    if (!onErase) {
+      path.smooth();
+      path.simplify(30);
+    }
+    onErase = false;
+    switcher = false;
+    path = new Path();
+  };
+
+  function undoPath() {
+    var length = project.activeLayer._children.length;
+    undoArray.push(project.activeLayer._children[length-2]);
+    project.activeLayer._children[length-2].remove();
+  }
+
+  function redoPath() {
+    project.activeLayer.addChild(undoArray[undoArray.length - 1]);
+    undoArray.pop();
+  }
+
+  try {
+    document.getElementById('undo').onclick = function() {
+      undoPath();
+    };
+
+    document.getElementById('redo').onclick = function() {
+      redoPath();
+    };
+  } catch (error) {};
+
+</script>
+
+
+</head>
+<body>
+  <button id="undo">Tap this to Undo </button>
+  <button id="redo">Tap this to Redo </button>
+  <canvas id="draw50Canvas" width=1920 height=1080 style="background-color: black"></canvas>
+</body>
+</html>
