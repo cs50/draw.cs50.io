@@ -125,6 +125,7 @@
                         finger.on('move', function(point) {
                             // add the current point to our existing line
                             paths[paths.length - 1].add(point);
+                            console.log(point);
                         });
 
                         // when the finger comes up, simplify the path (smooth)
@@ -155,6 +156,7 @@
                         finger1.on('move', function(point){
                             // add the current point to our existing line
                             paths[paths.length - 1].add(point);
+
                         });
 
 
