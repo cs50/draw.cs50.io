@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<<<<<<< HEAD
 <html>
 <head>
 <title>Draw50</title>
@@ -210,3 +211,346 @@
   <canvas id="draw50Canvas" width=1920 height=3240 style="background-color: black"></canvas>
 </body>
 </html>
+=======
+<!-- note, disable touch overscroll! https://www.addictivetips.com/web/disable-swipe-to-go-back-in-chrome/ -->
+<html>
+
+	<head>
+		<title>Draw50</title>
+		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+
+
+		<style>
+			html,
+			body {
+				height: 100%;
+				width: 100%;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			/* Scale canvas with resize attribute to full size */
+			canvas[resize] {
+				width: 100%;
+				height: 100%;
+			}
+
+			button.dot {
+				height: 25px !important;
+				width: 25px !important;
+				border-radius: 50%;
+				display: inline-block;
+			}
+
+			.red {
+				background-color: red !important;
+			}
+
+			.white {
+				background-color: white !important;
+			}
+
+			.green {
+				background-color: green !important;
+			}
+
+			.yellow {
+				background-color: yellow !important;
+			}
+
+			.orange {
+				background-color: orange !important;
+			}
+
+			.blue {
+				background-color: blue !important;
+			}
+
+
+			button.corner {
+				height: 100px;
+				width: 100px;
+			}
+
+			button.hidden {
+				position: absolute;
+				border: none !important;
+				background: transparent !important;
+				font-size: 0;
+				outline: none;
+			}
+
+			button.top-left {
+				top: 0px;
+				left: 0px;
+			}
+
+			button.top-right {
+				top: 0px;
+				right: 0px;
+			}
+
+			button.bottom-left {
+				bottom: 0px;
+				left: 0px;
+			}
+
+			button.menuButton {
+				height: 100%;
+				width: 10%;
+				color: white;
+				font-size: 2em;
+				background-color: black;
+				text-align: center;
+				outline: none;
+				border: none !important;
+				vertical-align: middle;
+				line-height: 100%;
+			}
+
+			button.bottom-right {
+				bottom: 0px;
+				right: 0px;
+			}
+
+			div#custom {
+				height: 40px;
+				width: 500px;
+				background-color: black;
+				position: absolute;
+				bottom: 0px;
+				left: 5%;
+				display: none;
+			}
+		</style>
+		<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+		<script src="js/hammer.min.js"></script>
+		<script src="js/paper-full.js"></script>
+		<script type="text/javascript" canvas="touch-me">
+		// defaults
+		var path;
+		var paths = [];
+		var hidden = [];
+		var undoAll = false;
+		var emojis = ["❤️", "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "💌", "💘", "💝", "💖", "💗", "💓", "💞", "💕", "👏", "✨", "🎈", "🎉", "🎊", "🦄", "☕", "👑", "💥", "💫", "🤠", "👻", "👽", "👾", "🤖", "😎"];
+
+
+		// pen defaults
+		var backgroundColor = 'black';
+		var defaultPenColor = 'white';
+		var penColor = defaultPenColor;
+		var defaultPenWeight = 15;
+		var penWeight = defaultPenWeight;
+
+		// eraser defaults
+		var eraserColor = backgroundColor;
+		var eraserWeight = 100;
+
+		function undo() {
+			// stop if there is nothing left to undo
+			if (paths.length < 1) {
+				return;
+			}
+
+			// swap arrays and make element invisible
+			hidden.push(paths.pop());
+			hidden[hidden.length - 1].visible = false;
+
+		}
+
+		// function to redo last undo
+		function redo() {
+			if (hidden.length < 1) {
+				return;
+			}
+
+			// swap arrays and make element visible
+			paths.push(hidden.pop());
+			paths[paths.length - 1].visible = true;
+		}
+
+		// function to clear the screen
+		function clearScreen() {
+			paper.project.clear();
+			hidden = [];
+			paths = [];
+		}
+
+		function increasePen() {
+			penWeight += 5;
+		}
+
+		function decreasePen() {
+			penWeight -= 5;
+		}
+
+		function changePenColor(color) {
+			penColor = color;
+		}
+
+		function resetPen() {
+			penColor = defaultPenColor;
+			penWeight = defaultPenWeight;
+		}
+
+		// main function
+		$(function() {
+
+			// setup the canvas		
+			var canvas = document.getElementById('touch-me');
+			paper.setup(canvas);
+			$("#touch-me").css("background-color", backgroundColor);
+
+			// setup hammer.js for the bottom left corner for the secret menu
+			var menuham = new Hammer.Manager(document.getElementById('mb'));
+			var swipe = new Hammer.Swipe();
+			menuham.add(swipe);
+
+			// enable swipe at bottom left corner to show secret menu (auto-hides after 4 secs)
+			menuham.on('swipeup', function() {
+				$("#custom").slideDown().delay(4000).slideUp();
+			});
+
+			// manually hide the menu
+			menuham.on('swipedown', function() {
+				$("#custom").slideUp();
+			});
+
+			// setup hammer.js for the main canvas
+			mc = new Hammer.Manager(canvas);
+
+			// handle 3-finger pan
+			var pan = new Hammer.Pan({ pointers: 3 });
+			mc.add(pan);
+
+			mc.on('panmove', function(ev) {
+				console.log("pan", ev);
+				paper.project.activeLayer.position.x += ev.deltaX / 75;
+				paper.project.activeLayer.position.y += ev.deltaY / 75;
+			});
+
+			// setup recognisers for 5 finger pinch
+			var pinch = new Hammer.Pinch({ pointers: 5 });
+			mc.add(pinch);
+
+			mc.on('pinchin', function(ev) {
+				paper.project.activeLayer.scale(0.99, new paper.Point(ev.center));
+			});
+
+			mc.on('pinchout', function(ev) {
+				paper.project.activeLayer.scale(1.01, new paper.Point(ev.center));
+			});
+
+			// intercept all touch events to deal with 1 and 2 fingers
+			mc.on('hammer.input', function(ev) {
+				switch (ev.maxPointers) {
+
+					// handle 1 finger
+					case 1:
+
+						// begin action on first press
+						if (ev.isFirst) {
+							path = new paper.Path({
+								segments: [{ x: ev.center.x, y: ev.center.y }],
+								strokeColor: penColor,
+								strokeWidth: penWeight,
+								strokeCap: 'round',
+								fullySelected: false
+							});
+							paths.push(path);
+
+							// now that we've restarted history, don't remember previous undos
+							hidden = [];
+
+						} else if (ev.isFinal) {
+							// end action
+							paths[paths.length - 1].simplify(8);
+						} else {
+							// take action on the move
+							paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
+						}
+						break;
+
+
+					// process 2 fingers
+					case 2:
+
+						// begin action on first press (this is often not called beacause the first event is when the first finger lands, then the middle event - in the else condition here - fires next)
+						if (ev.isFirst) {
+
+							path = new paper.Path({
+								segments: [{ x: ev.center.x, y: ev.center.y }],
+								strokeColor: eraserColor,
+								strokeWidth: eraserWeight,
+								strokeCap: 'round',
+								fullySelected: false
+							});
+							paths.push(path);
+
+						// the last event of this stroke, do any cleanup
+						} else if (ev.isFinal) {
+							
+						// end action
+						} else {
+							// take action on the move
+							// console.log("middle2");
+
+							// we color the path and change the weight here because the first event often fires with the single finger landing first
+							paths[paths.length - 1].strokeColor = eraserColor;
+							paths[paths.length - 1].strokeWidth = eraserWeight;
+
+							// add the new point
+							paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
+						}
+						break;
+
+					case 3:
+					case 4:
+					case 5:
+					case 6:
+						// do nothing for 3-6 fingers here, handle in pinch mode
+						break;
+					case 7:
+					case 8:
+					case 9:
+					case 10:
+						// clear the screen on a press over 
+						if (Math.abs(ev.deltaTime) > 400) {
+							clearScreen();
+						}
+						break;
+					default:
+						return;
+				}
+			});
+
+		});
+		</script>
+	</head>
+
+	<body>
+		<button class="top-left hidden corner" onclick="undo();"></button>
+		<button class="top-right hidden corner" onclick="redo();"></button>
+		<button id="mb" class="bottom-left hidden corner" onclick="undo();"></button>
+		<button class="bottom-right hidden corner" onclick="redo();"></button>
+		<canvas id="touch-me" resize></canvas>
+		<div id="custom">
+			<button class="menuButton" onclick="resetPen();"><i class="fas fa-undo"></i>
+
+</button>
+			<button class="menuButton" onclick="increasePen();">+</button>
+			<button class="menuButton" onclick="increasePen();">-</button>
+			<button class="menuButton dot red" onclick="changePenColor('red');"></button>
+			<button class="menuButton dot green" onclick="changePenColor('green');"></button>
+			<button class="menuButton dot orange" onclick="changePenColor('orange');"></button>
+			<button class="menuButton dot yellow" onclick="changePenColor('yellow');"></button>
+			<button class="menuButton dot blue" onclick="changePenColor('blue');"></button>
+			<button class="menuButton dot white" onclick="changePenColor('white');"></button>
+			<button class="menuButton" onclick="clearScreen();"><i class="fas fas fa-trash-alt"></i>
+
+</button>
+		</div>
+	</body>
+</html>
+>>>>>>> master
