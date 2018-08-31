@@ -30,7 +30,7 @@
 		var backgroundColor = 'black';
 		var defaultPenColor = 'white';
 		var penColor = defaultPenColor;
-		var defaultPenWeight = 10;
+		var defaultPenWeight = 4;
 		var penWeight = defaultPenWeight;
 
 		// eraser defaults
@@ -267,6 +267,12 @@
 						} else if (ev.isFinal) {
 							// end draw
 							paths[paths.length - 1].simplify(8);
+
+							// special feature for pen touch
+							if (ev.pointerType == 'pen') {
+								// this is a five finger move of some kind, cue emojis
+								emojiRain(250);
+							}
 						} else {
 							// take action on the pointer moving
 							paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
@@ -307,15 +313,8 @@
 
 					case 3:
 					case 4:
-						break;
 					case 5:
-
-						break;
 					case 6:
-						if (!ev.isFinal && !ev.isFirst) {
-							// this is a five finger move of some kind, cue emojis
-							emojiRain(250);
-						}
 						// do nothing for 3-6 fingers here, handle in pinch mode
 						break;
 					case 7:
