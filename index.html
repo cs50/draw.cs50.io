@@ -119,12 +119,12 @@
 				return;
 			}
 
-			// check if we're longer than the menu hide delta 
+			// check if we're longer than the menu hide delta
 			if (Date.now() - menuLastTouched > menuHideDelta) {
 				$("#custom").slideUp();
 			} else {
 				// it hasn't been long enough, wait another second and check again
-				setTimeout(hideMenu, 1000); 
+				setTimeout(hideMenu, 1000);
 			}
 		}
 
@@ -227,11 +227,7 @@
 
 						// the last event of this stroke, do any cleanup
 						} else if (ev.isFinal) {
-<<<<<<< HEAD
-
-=======
 							// we don't do any smoothing here, you don't want to smooth erasing
->>>>>>> master
 						// end action
 						} else {
 							// take action on the move
@@ -256,19 +252,13 @@
 					case 8:
 					case 9:
 					case 10:
-<<<<<<< HEAD
 						// clear the screen on a press over
-						if (Math.abs(ev.deltaTime) > 400) {
-							clearScreen();
-=======
-						// clear the screen on a press over 
-						
+
 						// clear the screen when hands are raised
 						if (ev.isFinal) {
 							if (Math.abs(ev.deltaTime) > 400) {
 								clearScreen();
 							}
->>>>>>> master
 						}
 						break;
 					default:
@@ -303,4 +293,3 @@
 		</div>
 	</body>
 </html>
->>>>>>> master
