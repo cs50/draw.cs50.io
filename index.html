@@ -249,7 +249,6 @@
 
 					// handle 1 finger
 					case 1:
-
 						// begin action on first press
 						if (ev.isFirst) {
 							path = new paper.Path({
@@ -270,7 +269,6 @@
 
 							// special feature for pen touch
 							if (ev.pointerType == 'pen') {
-								// this is a five finger move of some kind, cue emojis
 								emojiRain(250);
 							}
 						} else {
