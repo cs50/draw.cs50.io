@@ -128,6 +128,51 @@
 			}
 		}
 
+		function emojiRain(emojiCount) {
+			console.log("emojiRain ctd");
+
+			// get the layer for emojis
+			var layer = paper.project.layers['emojiLayer'];
+
+			// if emojis are already placed, don't do it again
+			if (layer.children.length > 0) {
+				return;
+			}
+
+			// no emojis, it's emoji time
+			layer.activate();
+
+			// determine how many emojis to place
+			let count = emojiCount;
+			
+			// Iterate over the items
+			for (var i = 0; i < count; i++) {
+
+				// create each emoji
+				let textItem = new paper.PointText({
+					content: emojis[Math.floor(Math.random() * emojis.length)],
+					center: [0.0],
+					fontSize: "2em",
+				});
+
+				// create a symbol from the emoji
+				let symbol = new paper.Symbol(textItem);
+
+				// place the emoji randomly on the view
+				var center = new paper.Point(Math.floor(Math.random() * paper.view.size.width), Math.floor(Math.random() * paper.view.size.height));
+				var placedSymbol = symbol.place(center);
+				placedSymbol.scale(i / count);
+			}
+
+			// put emojis behind drawing
+			layer.sendToBack();
+
+			// activate the default layer so it's not tied to the emoji layer
+			paper.project.layers['defaultLayer'].activate();
+		}
+
+		// The onFrame function is called up to 60 times a second:
+			 
 		// main function
 		$(function() {
 
@@ -138,6 +183,15 @@
 
 			// display default size/color of the stroke in the menu
 			updateStrokeIndicator();
+
+			let layer = new paper.Layer();
+			layer.name ="emojiLayer";
+
+			layer = new paper.Layer();
+			layer.name ="defaultLayer";
+
+			// activate the default layer
+			paper.project.layers['defaultLayer'].activate();
 
 			// setup hammer.js for the bottom left corner for the secret menu
 			var menuham = new Hammer.Manager(document.getElementById('mb'));
@@ -244,7 +298,13 @@
 
 					case 3:
 					case 4:
+						break;
 					case 5:
+						if (!ev.isFinal && !ev.isFirst) {
+							// this is a five finger move of some kind, cue emojis
+							emojiRain(500);
+						}
+						break;
 					case 6:
 						// do nothing for 3-6 fingers here, handle in pinch mode
 						break;
@@ -265,6 +325,27 @@
 						return;
 				}
 			});
+
+			// function called on every frame, use this to animate emojis in the background if they exist
+			paper.view.onFrame = function(event) {
+
+				// Run through the active layer's children list and change
+				// the position of the placed symbols:
+				let count = paper.project.layers['emojiLayer'].children.length;
+				for (var i = 0; i < count; i++) {
+					var item = paper.project.layers['emojiLayer'].children[i];
+					
+					// Move the item 1/20th of its width to the right. This way
+					// larger circles move faster than smaller circles:
+					item.position.x += item.bounds.width / 20;
+
+					// If the item has left the view on the right, move it back
+					// to the left:
+					if (item.bounds.left > paper.view.size.width) {
+						item.position.x = -item.bounds.width;
+					}
+				}
+			};
 
 		});
 		</script>
