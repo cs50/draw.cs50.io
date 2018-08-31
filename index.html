@@ -67,7 +67,8 @@
 
 		// function to clear the screen
 		function clearScreen() {
-			paper.project.clear();
+			paper.project.layers['defaultLayer'].removeChildren();
+			paper.view.draw();
 			hidden = [];
 			paths = [];
 			menuLastTouched = Date.now();
@@ -116,13 +117,15 @@
 		function clearEmojis() {
 			try {
 				paper.project.layers['emojiLayer'].removeChildren();
+				paper.view.draw();
+			} catch (e) {
+
 			}
 		}
 
 		function hideMenu() {
 			// base case if the menu is hidden
 			if ($("#custom").css('display') == "none") {
-				console.log("menu is hidden");
 				return;
 			}
 
@@ -140,33 +143,36 @@
 			var layer = paper.project.layers['emojiLayer'];
 
 			// if emojis are already placed, don't do it again
-			if (layer.children.length > 0) {
+			if (layer.hasChildren()) {
 				return;
 			}
+	
 
 			// no emojis, it's emoji time
 			layer.activate();
-
-			// determine how many emojis to place
-			let count = emojiCount;
+			let emojiSymbols = [];
 			
-			// Iterate over the items
-			for (var i = 0; i < count; i++) {
-
-				// create each emoji
-				let textItem = new paper.PointText({
-					content: emojis[Math.floor(Math.random() * emojis.length)],
+			// turn emojis into symbols
+			for (let i = 0; i < emojis.length; i++) {
+				let e = new paper.PointText({
+					content: emojis[i],
 					center: [0.0],
 					fontSize: "2em",
 				});
+				let s = new paper.Symbol(e);
+				emojiSymbols.push(s);
+			}
+			
+			// Iterate over the items
+			for (var i = 0; i < emojiCount; i++) {
 
 				// create a symbol from the emoji
-				let symbol = new paper.Symbol(textItem);
+				let symbol = emojiSymbols[Math.floor(Math.random() * emojiSymbols.length)];
 
 				// place the emoji randomly on the view
 				var center = new paper.Point(Math.floor(Math.random() * paper.view.size.width), Math.floor(Math.random() * paper.view.size.height));
 				var placedSymbol = symbol.place(center);
-				placedSymbol.scale(i / count);
+				placedSymbol.scale(i / emojiCount);
 			}
 
 			// put emojis behind drawing
@@ -221,7 +227,6 @@
 			mc.add(pan);
 
 			mc.on('panmove', function(ev) {
-				console.log("pan", ev);
 				paper.project.activeLayer.position.x += ev.deltaX / 75;
 				paper.project.activeLayer.position.y += ev.deltaY / 75;
 			});
@@ -290,7 +295,6 @@
 						// end action
 						} else {
 							// take action on the move
-							// console.log("middle2");
 
 							// we color the path and change the weight here because the first event often fires with the single finger landing first
 							paths[paths.length - 1].strokeColor = eraserColor;
@@ -336,18 +340,20 @@
 
 				// Run through the active layer's children list and change
 				// the position of the placed symbols:
-				let count = paper.project.layers['emojiLayer'].children.length;
-				for (var i = 0; i < count; i++) {
-					var item = paper.project.layers['emojiLayer'].children[i];
-					
-					// Move the item 1/20th of its width to the right. This way
-					// larger circles move faster than smaller circles:
-					item.position.x += item.bounds.width / 20;
 
-					// If the item has left the view on the right, move it back
-					// to the left:
-					if (item.bounds.left > paper.view.size.width) {
-						item.position.x = -item.bounds.width;
+				if (paper.project.layers['emojiLayer'].hasChildren()) {
+					for (var i = 0; i < paper.project.layers['emojiLayer'].children.length; i++) {
+						var item = paper.project.layers['emojiLayer'].children[i];
+						
+						// Move the item 1/20th of its width to the right. This way
+						// larger circles move faster than smaller circles:
+						item.position.x += item.bounds.width / 20;
+
+						// If the item has left the view on the right, move it back
+						// to the left:
+						if (item.bounds.left > paper.view.size.width) {
+							item.position.x = -item.bounds.width;
+						}
 					}
 				}
 			};
