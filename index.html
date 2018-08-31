@@ -7,6 +7,7 @@
 		<meta name="viewport" content="width=device-width, user-scalable=no">
 
 		<!-- font awesome for icons -->
+		<link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
 
 		<!-- custom style sheet -->
@@ -37,7 +38,7 @@
 		var eraserWeight = 100;
 
 		// time for menu to be out before hiding (in ms)
-		var menuHideDelta = 4000;
+		var menuHideDelta = 3000;
 		var menuLastTouched = -1;
 
 		function undo() {
@@ -73,7 +74,8 @@
 		}
 
 		function increasePen() {
-			penWeight += 5;
+			penWeight += 2;
+			updateStrokeIndicator()
 			menuLastTouched = Date.now();
 		}
 
@@ -81,18 +83,21 @@
 			// preserve minimum stroke of 5
 			if (penWeight > 4){
 				penWeight -= 2;
+				updateStrokeIndicator()
 			}
 			menuLastTouched = Date.now();
 		}
 
 		function changePenColor(color) {
 			penColor = color;
+			updateStrokeIndicator()
 			menuLastTouched = Date.now();
 		}
 
 		function resetPen() {
 			penColor = defaultPenColor;
 			penWeight = defaultPenWeight;
+			updateStrokeIndicator()
 			menuLastTouched = Date.now();
 		}
 
@@ -101,6 +106,10 @@
 			$("#custom").slideDown(400, function(){
 				hideMenu();
 			});
+		}
+
+		function updateStrokeIndicator() {
+			$("#strokeIndicator").text(penWeight).css("color", penColor);
 		}
 
 		function hideMenu() {
@@ -126,6 +135,9 @@
 			var canvas = document.getElementById('touch-me');
 			paper.setup(canvas);
 			$("#touch-me").css("background-color", backgroundColor);
+
+			// display default size/color of the stroke in the menu
+			updateStrokeIndicator();
 
 			// setup hammer.js for the bottom left corner for the secret menu
 			var menuham = new Hammer.Manager(document.getElementById('mb'));
@@ -265,20 +277,19 @@
 		<button class="bottom-right hidden corner" onclick="redo();"></button>
 		<canvas id="touch-me" resize></canvas>
 		<div id="custom">
-			<button class="menuButton" style="padding:5px;" onclick="resetPen();"><i class="fas fa-undo"></i>
-
-</button>
+			<button class="menuButton" style="padding:5px;" onclick="resetPen();"><i class="fas fa-undo"></i></button>
 			<button class="menuButton" onclick="increasePen();">+</button>
 			<button class="menuButton" onclick="decreasePen();">-</button>
+						<span id="strokeIndicator">test</span>
+
 			<button class="menuButton dot red" onclick="changePenColor('red');"></button>
 			<button class="menuButton dot green" onclick="changePenColor('green');"></button>
 			<button class="menuButton dot orange" onclick="changePenColor('orange');"></button>
 			<button class="menuButton dot yellow" onclick="changePenColor('yellow');"></button>
 			<button class="menuButton dot blue" onclick="changePenColor('blue');"></button>
 			<button class="menuButton dot white" onclick="changePenColor('white');"></button>
-			<button class="menuButton" onclick="clearScreen();"><i class="fas fas fa-trash-alt"></i>
+			<button class="menuButton" onclick="clearScreen();"><i class="fas fas fa-trash-alt"></i></button>
 
-</button>
 		</div>
 	</body>
 </html>
