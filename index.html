@@ -85,8 +85,8 @@
 		}
 
 		function decreasePen() {
-			// preserve minimum stroke of 5
-			if (penWeight > 6){
+			// preserve minimum stroke of 4
+			if (penWeight >= 6){
 				penWeight -= 2;
 				updateStrokeIndicator()
 			}
@@ -149,12 +149,12 @@
 			if (layer.hasChildren()) {
 				return;
 			}
-	
+
 
 			// no emojis, it's emoji time
 			layer.activate();
 			let emojiSymbols = [];
-			
+
 			// turn emojis into symbols
 			for (let i = 0; i < emojis.length; i++) {
 				let e = new paper.PointText({
@@ -165,7 +165,7 @@
 				let s = new paper.Symbol(e);
 				emojiSymbols.push(s);
 			}
-			
+
 			// Iterate over the items
 			for (var i = 0; i < emojiCount; i++) {
 
@@ -186,7 +186,7 @@
 		}
 
 		// The onFrame function is called up to 60 times a second:
-			 
+
 		// main function
 		$(function() {
 
@@ -345,7 +345,7 @@
 				if (paper.project.layers['emojiLayer'].hasChildren()) {
 					for (var i = 0; i < paper.project.layers['emojiLayer'].children.length; i++) {
 						var item = paper.project.layers['emojiLayer'].children[i];
-						
+
 						// Move the item 1/20th of its width to the right. This way
 						// larger circles move faster than smaller circles:
 						item.position.x += item.bounds.width / 20;
@@ -373,7 +373,7 @@
 			<button class="menuButton" style="padding:5px;" onclick="resetPen();"><i class="fas fa-undo"></i></button>
 			<button class="menuButton" onclick="decreasePen();">-</button>
 			<button class="menuButton" onclick="increasePen();">+</button>
-			
+
 						<span id="strokeIndicator">test</span>
 
 			<button class="menuButton dot red" onclick="changePenColor('red');"></button>
