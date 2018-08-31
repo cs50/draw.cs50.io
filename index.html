@@ -5,112 +5,15 @@
 	<head>
 		<title>Draw50</title>
 		<meta name="viewport" content="width=device-width, user-scalable=no">
+
+		<!-- font awesome for icons -->
+		<link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
 
+		<!-- custom style sheet -->
+		<link rel="stylesheet" type="text/css" href="css/style.css">
 
-		<style>
-			html,
-			body {
-				height: 100%;
-				width: 100%;
-				margin: 0px;
-				overflow: hidden;
-			}
-
-			/* Scale canvas with resize attribute to full size */
-			canvas[resize] {
-				width: 100%;
-				height: 100%;
-			}
-
-			button.dot {
-				height: 25px !important;
-				width: 25px !important;
-				border-radius: 50%;
-				display: inline-block;
-			}
-
-			.red {
-				background-color: red !important;
-			}
-
-			.white {
-				background-color: white !important;
-			}
-
-			.green {
-				background-color: green !important;
-			}
-
-			.yellow {
-				background-color: yellow !important;
-			}
-
-			.orange {
-				background-color: orange !important;
-			}
-
-			.blue {
-				background-color: blue !important;
-			}
-
-
-			button.corner {
-				height: 100px;
-				width: 100px;
-			}
-
-			button.hidden {
-				position: absolute;
-				border: none !important;
-				background: transparent !important;
-				font-size: 0;
-				outline: none;
-			}
-
-			button.top-left {
-				top: 0px;
-				left: 0px;
-			}
-
-			button.top-right {
-				top: 0px;
-				right: 0px;
-			}
-
-			button.bottom-left {
-				bottom: 0px;
-				left: 0px;
-			}
-
-			button.menuButton {
-				height: 100%;
-				width: 10%;
-				color: white;
-				font-size: 2em;
-				background-color: black;
-				text-align: center;
-				outline: none;
-				border: none !important;
-				vertical-align: middle;
-				line-height: 100%;
-			}
-
-			button.bottom-right {
-				bottom: 0px;
-				right: 0px;
-			}
-
-			div#custom {
-				height: 40px;
-				width: 500px;
-				background-color: black;
-				position: absolute;
-				bottom: 0px;
-				left: 5%;
-				display: none;
-			}
-		</style>
+		<!-- js libraries -->
 		<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 		<script src="js/hammer.min.js"></script>
 		<script src="js/paper-full.js"></script>
@@ -127,12 +30,16 @@
 		var backgroundColor = 'black';
 		var defaultPenColor = 'white';
 		var penColor = defaultPenColor;
-		var defaultPenWeight = 15;
+		var defaultPenWeight = 10;
 		var penWeight = defaultPenWeight;
 
 		// eraser defaults
 		var eraserColor = backgroundColor;
 		var eraserWeight = 100;
+
+		// time for menu to be out before hiding (in ms)
+		var menuHideDelta = 3000;
+		var menuLastTouched = -1;
 
 		function undo() {
 			// stop if there is nothing left to undo
@@ -143,7 +50,7 @@
 			// swap arrays and make element invisible
 			hidden.push(paths.pop());
 			hidden[hidden.length - 1].visible = false;
-
+			menuLastTouched = Date.now();
 		}
 
 		// function to redo last undo
@@ -155,6 +62,7 @@
 			// swap arrays and make element visible
 			paths.push(hidden.pop());
 			paths[paths.length - 1].visible = true;
+			menuLastTouched = Date.now();
 		}
 
 		// function to clear the screen
@@ -162,23 +70,62 @@
 			paper.project.clear();
 			hidden = [];
 			paths = [];
+			menuLastTouched = Date.now();
 		}
 
 		function increasePen() {
-			penWeight += 5;
+			penWeight += 2;
+			updateStrokeIndicator()
+			menuLastTouched = Date.now();
 		}
 
 		function decreasePen() {
-			penWeight -= 5;
+			// preserve minimum stroke of 5
+			if (penWeight > 4){
+				penWeight -= 2;
+				updateStrokeIndicator()
+			}
+			menuLastTouched = Date.now();
 		}
 
 		function changePenColor(color) {
 			penColor = color;
+			updateStrokeIndicator()
+			menuLastTouched = Date.now();
 		}
 
 		function resetPen() {
 			penColor = defaultPenColor;
 			penWeight = defaultPenWeight;
+			updateStrokeIndicator()
+			menuLastTouched = Date.now();
+		}
+
+		function showMenu() {
+			menuLastTouched = Date.now();
+			$("#custom").slideDown(400, function(){
+				hideMenu();
+			});
+		}
+
+		function updateStrokeIndicator() {
+			$("#strokeIndicator").text(penWeight).css("color", penColor);
+		}
+
+		function hideMenu() {
+			// base case if the menu is hidden
+			if ($("#custom").css('display') == "none") {
+				console.log("menu is hidden");
+				return;
+			}
+
+			// check if we're longer than the menu hide delta 
+			if (Date.now() - menuLastTouched > menuHideDelta) {
+				$("#custom").slideUp();
+			} else {
+				// it hasn't been long enough, wait another second and check again
+				setTimeout(hideMenu, 1000); 
+			}
 		}
 
 		// main function
@@ -189,6 +136,9 @@
 			paper.setup(canvas);
 			$("#touch-me").css("background-color", backgroundColor);
 
+			// display default size/color of the stroke in the menu
+			updateStrokeIndicator();
+
 			// setup hammer.js for the bottom left corner for the secret menu
 			var menuham = new Hammer.Manager(document.getElementById('mb'));
 			var swipe = new Hammer.Swipe();
@@ -196,7 +146,7 @@
 
 			// enable swipe at bottom left corner to show secret menu (auto-hides after 4 secs)
 			menuham.on('swipeup', function() {
-				$("#custom").slideDown().delay(4000).slideUp();
+				showMenu();
 			});
 
 			// manually hide the menu
@@ -251,10 +201,10 @@
 							hidden = [];
 
 						} else if (ev.isFinal) {
-							// end action
+							// end draw
 							paths[paths.length - 1].simplify(8);
 						} else {
-							// take action on the move
+							// take action on the pointer moving
 							paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
 						}
 						break;
@@ -277,7 +227,11 @@
 
 						// the last event of this stroke, do any cleanup
 						} else if (ev.isFinal) {
+<<<<<<< HEAD
 
+=======
+							// we don't do any smoothing here, you don't want to smooth erasing
+>>>>>>> master
 						// end action
 						} else {
 							// take action on the move
@@ -302,9 +256,19 @@
 					case 8:
 					case 9:
 					case 10:
+<<<<<<< HEAD
 						// clear the screen on a press over
 						if (Math.abs(ev.deltaTime) > 400) {
 							clearScreen();
+=======
+						// clear the screen on a press over 
+						
+						// clear the screen when hands are raised
+						if (ev.isFinal) {
+							if (Math.abs(ev.deltaTime) > 400) {
+								clearScreen();
+							}
+>>>>>>> master
 						}
 						break;
 					default:
@@ -323,20 +287,19 @@
 		<button class="bottom-right hidden corner" onclick="redo();"></button>
 		<canvas id="touch-me" resize></canvas>
 		<div id="custom">
-			<button class="menuButton" onclick="resetPen();"><i class="fas fa-undo"></i>
-
-</button>
+			<button class="menuButton" style="padding:5px;" onclick="resetPen();"><i class="fas fa-undo"></i></button>
 			<button class="menuButton" onclick="increasePen();">+</button>
-			<button class="menuButton" onclick="increasePen();">-</button>
+			<button class="menuButton" onclick="decreasePen();">-</button>
+						<span id="strokeIndicator">test</span>
+
 			<button class="menuButton dot red" onclick="changePenColor('red');"></button>
 			<button class="menuButton dot green" onclick="changePenColor('green');"></button>
 			<button class="menuButton dot orange" onclick="changePenColor('orange');"></button>
 			<button class="menuButton dot yellow" onclick="changePenColor('yellow');"></button>
 			<button class="menuButton dot blue" onclick="changePenColor('blue');"></button>
 			<button class="menuButton dot white" onclick="changePenColor('white');"></button>
-			<button class="menuButton" onclick="clearScreen();"><i class="fas fas fa-trash-alt"></i>
+			<button class="menuButton" onclick="clearScreen();"><i class="fas fas fa-trash-alt"></i></button>
 
-</button>
 		</div>
 	</body>
 </html>
