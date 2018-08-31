@@ -5,9 +5,14 @@
 	<head>
 		<title>Draw50</title>
 		<meta name="viewport" content="width=device-width, user-scalable=no">
+
+		<!-- font awesome for icons -->
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+
+		<!-- custom style sheet -->
 		<link rel="stylesheet" type="text/css" href="css/style.css">
 
+		<!-- js libraries -->
 		<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 		<script src="js/hammer.min.js"></script>
 		<script src="js/paper-full.js"></script>
@@ -31,6 +36,10 @@
 		var eraserColor = backgroundColor;
 		var eraserWeight = 100;
 
+		// time for menu to be out before hiding (in ms)
+		var menuHideDelta = 4000;
+		var menuLastTouched = -1;
+
 		function undo() {
 			// stop if there is nothing left to undo
 			if (paths.length < 1) {
@@ -40,7 +49,7 @@
 			// swap arrays and make element invisible
 			hidden.push(paths.pop());
 			hidden[hidden.length - 1].visible = false;
-
+			menuLastTouched = Date.now();
 		}
 
 		// function to redo last undo
@@ -52,6 +61,7 @@
 			// swap arrays and make element visible
 			paths.push(hidden.pop());
 			paths[paths.length - 1].visible = true;
+			menuLastTouched = Date.now();
 		}
 
 		// function to clear the screen
@@ -59,23 +69,54 @@
 			paper.project.clear();
 			hidden = [];
 			paths = [];
+			menuLastTouched = Date.now();
 		}
 
 		function increasePen() {
 			penWeight += 5;
+			menuLastTouched = Date.now();
 		}
 
 		function decreasePen() {
-			penWeight -= 5;
+			// preserve minimum stroke of 5
+			if (penWeight > 4){
+				penWeight -= 2;
+			}
+			menuLastTouched = Date.now();
 		}
 
 		function changePenColor(color) {
 			penColor = color;
+			menuLastTouched = Date.now();
 		}
 
 		function resetPen() {
 			penColor = defaultPenColor;
 			penWeight = defaultPenWeight;
+			menuLastTouched = Date.now();
+		}
+
+		function showMenu() {
+			menuLastTouched = Date.now();
+			$("#custom").slideDown(400, function(){
+				hideMenu();
+			});
+		}
+
+		function hideMenu() {
+			// base case if the menu is hidden
+			if ($("#custom").css('display') == "none") {
+				console.log("menu is hidden");
+				return;
+			}
+
+			// check if we're longer than the menu hide delta 
+			if (Date.now() - menuLastTouched > menuHideDelta) {
+				$("#custom").slideUp();
+			} else {
+				// it hasn't been long enough, wait another second and check again
+				setTimeout(hideMenu, 1000); 
+			}
 		}
 
 		// main function
@@ -93,7 +134,7 @@
 
 			// enable swipe at bottom left corner to show secret menu (auto-hides after 4 secs)
 			menuham.on('swipeup', function() {
-				$("#custom").slideDown().delay(4000).slideUp();
+				showMenu();
 			});
 
 			// manually hide the menu
@@ -148,10 +189,10 @@
 							hidden = [];
 
 						} else if (ev.isFinal) {
-							// end action
+							// end draw
 							paths[paths.length - 1].simplify(8);
 						} else {
-							// take action on the move
+							// take action on the pointer moving
 							paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
 						}
 						break;
@@ -174,7 +215,7 @@
 
 						// the last event of this stroke, do any cleanup
 						} else if (ev.isFinal) {
-							
+							// we don't do any smoothing here, you don't want to smooth erasing
 						// end action
 						} else {
 							// take action on the move
@@ -200,8 +241,12 @@
 					case 9:
 					case 10:
 						// clear the screen on a press over 
-						if (Math.abs(ev.deltaTime) > 400) {
-							clearScreen();
+						
+						// clear the screen when hands are raised
+						if (ev.isFinal) {
+							if (Math.abs(ev.deltaTime) > 400) {
+								clearScreen();
+							}
 						}
 						break;
 					default:
@@ -220,7 +265,7 @@
 		<button class="bottom-right hidden corner" onclick="redo();"></button>
 		<canvas id="touch-me" resize></canvas>
 		<div id="custom">
-			<button class="menuButton" onclick="resetPen();"><i class="fas fa-undo"></i>
+			<button class="menuButton" style="padding:5px;" onclick="resetPen();"><i class="fas fa-undo"></i>
 
 </button>
 			<button class="menuButton" onclick="increasePen();">+</button>

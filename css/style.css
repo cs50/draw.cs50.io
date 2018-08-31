@@ -6,9 +6,7 @@ body {
 	overflow: hidden;
 }
 
-
 /* Scale canvas with resize attribute to full size */
-
 canvas[resize] {
 	width: 100%;
 	height: 100%;
@@ -45,6 +43,12 @@ button.dot {
 	background-color: blue !important;
 }
 
+.fas {
+	/* keep font awesome icons in the menu looking close to the others size-wise */
+	font-size: 0.75em;
+    line-height: 1.6;
+    vertical-align: top;
+}
 
 button.corner {
 	height: 100px;
@@ -62,6 +66,8 @@ button.hidden {
 button.top-left {
 	top: 0px;
 	left: 0px;
+	height: 200px !important;
+	width: 200px !important;
 }
 
 button.top-right {
@@ -85,6 +91,10 @@ button.menuButton {
 	border: none !important;
 	vertical-align: middle;
 	line-height: 100%;
+}
+
+button.menuButton:active {
+	transform: translateY(2px);
 }
 
 button.bottom-right {
