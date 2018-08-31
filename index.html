@@ -30,7 +30,7 @@
 		var backgroundColor = 'black';
 		var defaultPenColor = 'white';
 		var penColor = defaultPenColor;
-		var defaultPenWeight = 10;
+		var defaultPenWeight = 4;
 		var penWeight = defaultPenWeight;
 
 		// eraser defaults
@@ -40,6 +40,9 @@
 		// time for menu to be out before hiding (in ms)
 		var menuHideDelta = 3000;
 		var menuLastTouched = -1;
+
+		// prevent right click to avoid pop-up menu
+		document.addEventListener('contextmenu', event => event.preventDefault());
 
 		function undo() {
 			// stop if there is nothing left to undo
@@ -67,10 +70,12 @@
 
 		// function to clear the screen
 		function clearScreen() {
-			paper.project.clear();
+			paper.project.layers['defaultLayer'].removeChildren();
+			paper.view.draw();
 			hidden = [];
 			paths = [];
 			menuLastTouched = Date.now();
+			clearEmojis();
 		}
 
 		function increasePen() {
@@ -112,10 +117,18 @@
 			$("#strokeIndicator").text(penWeight).css("color", penColor);
 		}
 
+		function clearEmojis() {
+			try {
+				paper.project.layers['emojiLayer'].removeChildren();
+				paper.view.draw();
+			} catch (e) {
+
+			}
+		}
+
 		function hideMenu() {
 			// base case if the menu is hidden
 			if ($("#custom").css('display') == "none") {
-				console.log("menu is hidden");
 				return;
 			}
 
@@ -128,6 +141,52 @@
 			}
 		}
 
+		function emojiRain(emojiCount) {
+			// get the layer for emojis
+			var layer = paper.project.layers['emojiLayer'];
+
+			// if emojis are already placed, don't do it again
+			if (layer.hasChildren()) {
+				return;
+			}
+	
+
+			// no emojis, it's emoji time
+			layer.activate();
+			let emojiSymbols = [];
+			
+			// turn emojis into symbols
+			for (let i = 0; i < emojis.length; i++) {
+				let e = new paper.PointText({
+					content: emojis[i],
+					center: [0.0],
+					fontSize: "2em",
+				});
+				let s = new paper.Symbol(e);
+				emojiSymbols.push(s);
+			}
+			
+			// Iterate over the items
+			for (var i = 0; i < emojiCount; i++) {
+
+				// create a symbol from the emoji
+				let symbol = emojiSymbols[Math.floor(Math.random() * emojiSymbols.length)];
+
+				// place the emoji randomly on the view
+				var center = new paper.Point(Math.floor(Math.random() * paper.view.size.width), Math.floor(Math.random() * paper.view.size.height));
+				var placedSymbol = symbol.place(center);
+				placedSymbol.scale(i / emojiCount);
+			}
+
+			// put emojis behind drawing
+			layer.sendToBack();
+
+			// activate the default layer so it's not tied to the emoji layer
+			paper.project.layers['defaultLayer'].activate();
+		}
+
+		// The onFrame function is called up to 60 times a second:
+			 
 		// main function
 		$(function() {
 
@@ -138,6 +197,15 @@
 
 			// display default size/color of the stroke in the menu
 			updateStrokeIndicator();
+
+			let layer = new paper.Layer();
+			layer.name ="emojiLayer";
+
+			layer = new paper.Layer();
+			layer.name ="defaultLayer";
+
+			// activate the default layer
+			paper.project.layers['defaultLayer'].activate();
 
 			// setup hammer.js for the bottom left corner for the secret menu
 			var menuham = new Hammer.Manager(document.getElementById('mb'));
@@ -162,7 +230,6 @@
 			mc.add(pan);
 
 			mc.on('panmove', function(ev) {
-				console.log("pan", ev);
 				paper.project.activeLayer.position.x += ev.deltaX / 75;
 				paper.project.activeLayer.position.y += ev.deltaY / 75;
 			});
@@ -185,7 +252,6 @@
 
 					// handle 1 finger
 					case 1:
-
 						// begin action on first press
 						if (ev.isFirst) {
 							path = new paper.Path({
@@ -203,6 +269,11 @@
 						} else if (ev.isFinal) {
 							// end draw
 							paths[paths.length - 1].simplify(8);
+
+							// special feature for pen touch
+							if (ev.pointerType == 'pen') {
+								emojiRain(250);
+							}
 						} else {
 							// take action on the pointer moving
 							paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
@@ -231,7 +302,6 @@
 						// end action
 						} else {
 							// take action on the move
-							// console.log("middle2");
 
 							// we color the path and change the weight here because the first event often fires with the single finger landing first
 							paths[paths.length - 1].strokeColor = eraserColor;
@@ -266,6 +336,29 @@
 				}
 			});
 
+			// function called on every frame, use this to animate emojis in the background if they exist
+			paper.view.onFrame = function(event) {
+
+				// Run through the active layer's children list and change
+				// the position of the placed symbols:
+
+				if (paper.project.layers['emojiLayer'].hasChildren()) {
+					for (var i = 0; i < paper.project.layers['emojiLayer'].children.length; i++) {
+						var item = paper.project.layers['emojiLayer'].children[i];
+						
+						// Move the item 1/20th of its width to the right. This way
+						// larger circles move faster than smaller circles:
+						item.position.x += item.bounds.width / 20;
+
+						// If the item has left the view on the right, move it back
+						// to the left:
+						if (item.bounds.left > paper.view.size.width) {
+							item.position.x = -item.bounds.width;
+						}
+					}
+				}
+			};
+
 		});
 		</script>
 	</head>
@@ -278,8 +371,9 @@
 		<canvas id="touch-me" resize></canvas>
 		<div id="custom">
 			<button class="menuButton" style="padding:5px;" onclick="resetPen();"><i class="fas fa-undo"></i></button>
-			<button class="menuButton" onclick="increasePen();">+</button>
 			<button class="menuButton" onclick="decreasePen();">-</button>
+			<button class="menuButton" onclick="increasePen();">+</button>
+			
 						<span id="strokeIndicator">test</span>
 
 			<button class="menuButton dot red" onclick="changePenColor('red');"></button>
