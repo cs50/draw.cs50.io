@@ -71,6 +71,7 @@
 			hidden = [];
 			paths = [];
 			menuLastTouched = Date.now();
+			clearEmojis();
 		}
 
 		function increasePen() {
@@ -110,6 +111,12 @@
 
 		function updateStrokeIndicator() {
 			$("#strokeIndicator").text(penWeight).css("color", penColor);
+		}
+
+		function clearEmojis() {
+			try {
+				paper.project.layers['emojiLayer'].removeChildren();
+			}
 		}
 
 		function hideMenu() {
@@ -300,7 +307,7 @@
 					case 5:
 						if (!ev.isFinal && !ev.isFirst) {
 							// this is a five finger move of some kind, cue emojis
-							emojiRain(500);
+							emojiRain(250);
 						}
 						break;
 					case 6:
