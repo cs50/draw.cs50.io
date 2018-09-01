@@ -108,6 +108,7 @@
 
 		function showMenu() {
 			menuLastTouched = Date.now();
+			refreshDownload();
 			$("#custom").slideDown(400, function(){
 				hideMenu();
 			});
@@ -136,12 +137,32 @@
 			if (Date.now() - menuLastTouched > menuHideDelta) {
 				$("#custom").slideUp();
 			} else {
+				// update the save function in case canvas is updated (refreshes the png in case of download)
+				refreshDownload();
+
 				// it hasn't been long enough, wait another second and check again
 				setTimeout(hideMenu, 1000);
 			}
 		}
 
+		// updates the href on the save icon with a fresh png version of the canvas to download
+		function refreshDownload() {
+			let c = document.getElementById("touch-me");
+			let img = c.toDataURL('image/png').replace("image/png", "image/octet-stream");;
+			console.log("img", img);
+			var d = new Date();
+
+			var datestring = d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate() + "-" + d.getHours() + d.getMinutes() + ".png";
+
+			$("#download").attr("download", "draw50-" + datestring);
+			$("#download").attr("href", img);
+		}
+
 		function emojiRain(emojiCount) {
+
+			// temporary disable
+			return;
+
 			// get the layer for emojis
 			var layer = paper.project.layers['emojiLayer'];
 
@@ -149,7 +170,6 @@
 			if (layer.hasChildren()) {
 				return;
 			}
-
 
 			// no emojis, it's emoji time
 			layer.activate();
@@ -234,9 +254,10 @@
 				paper.project.activeLayer.position.y += ev.deltaY / 75;
 			});
 
+			// disabled as not working well
 			// setup recognisers for 5 finger pinch
-			var pinch = new Hammer.Pinch({ pointers: 5 });
-			mc.add(pinch);
+			// var pinch = new Hammer.Pinch({ pointers: 5 });
+			// mc.add(pinch);
 
 			mc.on('pinchin', function(ev) {
 				paper.project.activeLayer.scale(0.99, new paper.Point(ev.center));
@@ -383,6 +404,9 @@
 			<button class="menuButton dot blue" onclick="changePenColor('blue');"></button>
 			<button class="menuButton dot white" onclick="changePenColor('white');"></button>
 			<button class="menuButton" onclick="clearScreen();"><i class="fas fas fa-trash-alt"></i></button>
+			<a href="#" class="menuButton download" id="download" download="my-file-name.png"><i class="menuButton fas fa-download"></i>
+
+</a>
 
 		</div>
 	</body>
