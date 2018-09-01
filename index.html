@@ -158,6 +158,19 @@
 			$("#download").attr("href", img);
 		}
 
+		function saveToLocalStorage() {
+			localStorage.setItem('draw50', paper.project.exportJSON());
+		}
+
+		function getFromLocalStorage() {
+			// first clear the canvas
+			paper.project.clear();
+
+			let json = localStorage.getItem('draw50');
+			paper.importJSON(json);
+
+		}
+
 		function emojiRain(emojiCount) {
 
 			// temporary disable
@@ -239,7 +252,7 @@
 
 			// manually hide the menu
 			menuham.on('swipedown', function() {
-				$("#custom").slideUp();
+				// $("#custom").slideUp();
 			});
 
 			// setup hammer.js for the main canvas
@@ -269,6 +282,12 @@
 
 			// intercept all touch events to deal with 1 and 2 fingers
 			mc.on('hammer.input', function(ev) {
+
+				// regardless of action, if it's the last part of the touch, update local storage
+				if (ev.isFinal) {
+					saveToLocalStorage();
+				}
+
 				switch (ev.maxPointers) {
 
 					// handle 1 finger
@@ -391,12 +410,9 @@
 		<button class="bottom-right hidden corner" onclick="redo();"></button>
 		<canvas id="touch-me" resize></canvas>
 		<div id="custom">
-			<button class="menuButton" style="padding:5px;" onclick="resetPen();"><i class="fas fa-undo"></i></button>
 			<button class="menuButton" onclick="decreasePen();">-</button>
 			<button class="menuButton" onclick="increasePen();">+</button>
-
-						<span id="strokeIndicator">test</span>
-
+			<span id="strokeIndicator" onclick="resetPen();">4</span>
 			<button class="menuButton dot red" onclick="changePenColor('red');"></button>
 			<button class="menuButton dot green" onclick="changePenColor('green');"></button>
 			<button class="menuButton dot orange" onclick="changePenColor('orange');"></button>
@@ -404,9 +420,8 @@
 			<button class="menuButton dot blue" onclick="changePenColor('blue');"></button>
 			<button class="menuButton dot white" onclick="changePenColor('white');"></button>
 			<button class="menuButton" onclick="clearScreen();"><i class="fas fas fa-trash-alt"></i></button>
-			<a href="#" class="menuButton download" id="download" download="my-file-name.png"><i class="menuButton fas fa-download"></i>
-
-</a>
+			<button class="menuButton" onclick="getFromLocalStorage();"><i class="fas fa-undo"></i></button>
+			<a href="#" class="menuButton download" id="download" style="margin-left:1.75%;"download="my-file-name.png"><i class="menuButton fas fa-download"></i></a>
 
 		</div>
 	</body>
