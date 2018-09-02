@@ -37,6 +37,7 @@
 		// eraser defaults
 		var eraserColor = backgroundColor;
 		var eraserWeight = 100;
+		var erasing = false;
 
 		// time for menu to be out before hiding (in ms)
 		var menuHideDelta = 3000;
@@ -126,6 +127,14 @@
 			} catch (e) {
 
 			}
+		}
+
+		function finishErase() {
+			// remember that we're done erasing
+			erasing = false;
+
+			// now that we're done, change the ink color to white and change the blend mode, this acts as a mask, rather than painting black on top.  You see black on top if you download the png, unless you use this blend mode (acts like a clipping mask)
+			path.blendMode = 'destination-out';
 		}
 
 		function hideMenu() {
@@ -319,6 +328,11 @@
 					saveToLocalStorage();
 				}
 
+				// this corner case happens if you are erasing and put a third finger down before lifting your two fingers off of the screen
+				if (ev.maxPointers !== 2 && erasing == true) {
+					finishErase();
+				}
+
 				switch (ev.maxPointers) {
 
 					// handle 1 finger
@@ -358,6 +372,9 @@
 						// begin action on first press (this is often not called beacause the first event is when the first finger lands, then the middle event - in the else condition here - fires next)
 						if (ev.isFirst) {
 
+							// remember that we're erasing in case another finger accidentally hits the screen
+							erasing = true;
+
 							path = new paper.Path({
 								segments: [{ x: ev.center.x, y: ev.center.y }],
 								strokeColor: eraserColor,
@@ -369,10 +386,17 @@
 
 						// the last event of this stroke, do any cleanup
 						} else if (ev.isFinal) {
-							// we don't do any smoothing here, you don't want to smooth erasing
+							// we're done erasing, complete erasing cleanup
+							finishErase();
+						
+							
+
 						// end action
 						} else {
 							// take action on the move
+
+							// remember that we're erasing in case another finger accidentally hits the screen
+							erasing = true;
 
 							// we color the path and change the weight here because the first event often fires with the single finger landing first
 							paths[paths.length - 1].strokeColor = eraserColor;
