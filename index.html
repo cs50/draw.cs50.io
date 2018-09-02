@@ -5,6 +5,7 @@
 	<head>
 		<title>Draw50</title>
 		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<meta charset="UTF-8">
 
 		<!-- font awesome for icons -->
 		<link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
@@ -15,7 +16,7 @@
 
 		<!-- js libraries -->
 		<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-		<script src="js/hammer.min.js"></script>
+		<script src="js/hammer.js"></script>
 		<script src="js/paper-full.js"></script>
 		<script type="text/javascript" canvas="touch-me">
 		// defaults
@@ -149,7 +150,7 @@
 		function refreshDownload() {
 			let c = document.getElementById("touch-me");
 			let img = c.toDataURL('image/png').replace("image/png", "image/octet-stream");;
-			console.log("img", img);
+			// console.log("img", img);
 			var d = new Date();
 
 			var datestring = d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate() + "-" + d.getHours() + d.getMinutes() + ".png";
@@ -159,17 +160,36 @@
 		}
 
 		function saveToLocalStorage() {
-			localStorage.setItem('draw50', paper.project.exportJSON());
-		}
+			// TODO:
+			// prevent overwriting the saved JSON file accidentally
+			// case: when a user wants to restore the canvas, but accidentally draws
+			// something on the canvas
+			try {
+				localStorage.setItem('draw50canvas', paper.project.exportJSON());
+			} catch (error) {
+				console.log(error);
+			};
+
+		};
 
 		function getFromLocalStorage() {
-			// first clear the canvas
-			paper.project.clear();
 
-			let json = localStorage.getItem('draw50');
-			paper.importJSON(json);
+			try {
+				// attempt to retrieve saved draw50 JSON data
+				let json = localStorage.getItem('draw50canvas');
 
-		}
+				// if draw50 JSON file existed, load the JSON file to canvas
+				if (json !== null) {
+					// first clear the canvas
+					paper.project.clear();
+					paper.importJSON(json);
+					return;
+				};
+			} catch (error) {
+				console.log(error);
+			};
+
+		};
 
 		function emojiRain(emojiCount) {
 
@@ -422,7 +442,6 @@
 			<button class="menuButton" onclick="clearScreen();"><i class="fas fas fa-trash-alt"></i></button>
 			<button class="menuButton" onclick="getFromLocalStorage();"><i class="fas fa-undo"></i></button>
 			<a href="#" class="menuButton download" id="download" style="margin-left:1.75%;"download="my-file-name.png"><i class="menuButton fas fa-download"></i></a>
-
 		</div>
 	</body>
 </html>
