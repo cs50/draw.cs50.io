@@ -283,8 +283,19 @@
 			mc.add(pan);
 
 			mc.on('panmove', function(ev) {
-				paper.project.activeLayer.position.x += ev.deltaX / 75;
-				paper.project.activeLayer.position.y += ev.deltaY / 75;
+				let layerCount = paper.project.layers.length;
+
+				// move all layers, not just the 
+				for (let i = 0; i < layerCount; i++) {
+					// special case and ski emoji layer, do not move
+					if (paper.project.layers[i].name == 'emojiLayer') {
+						continue;
+					}
+
+					// move erase layer and draw layer
+					paper.project.layers[i].position.x = ev.center.x;
+					paper.project.layers[i].position.y = ev.center.y;
+				}
 			});
 
 			// disabled as not working well
