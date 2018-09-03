@@ -4,6 +4,7 @@ body {
 	width: 100%;
 	margin: 0px;
 	overflow: hidden;
+	font-size:20px;
 }
 
 /* Scale canvas with resize attribute to full size */
@@ -45,8 +46,8 @@ button.dot {
 
 .fas {
 	/* keep font awesome icons in the menu looking close to the others size-wise */
-	font-size: 0.75em;
-    line-height: 1.6;
+	font-size: 1.1rem;
+    line-height: 1.6rem;
     vertical-align: top;
 }
 
@@ -80,17 +81,18 @@ button.bottom-left {
 	width: 200px !important;
 }
 
-button.menuButton {
+.menuButton {
 	height: 100%;
 	width: 6%;
 	color: white;
-	font-size: 2em;
+	font-size: 1.7rem;
 	background-color: black;
 	text-align: center;
 	outline: none;
 	border: none !important;
 	vertical-align: middle;
 	line-height: 100%;
+	margin-bottom: 1rem;
 }
 
 #strokeIndicator {
@@ -98,23 +100,26 @@ button.menuButton {
 	display: inline-block;
 	text-align:center;
 	font-family: 'Roboto Condensed', sans-serif;
-    font-size: 1.5em;
-    line-height: 1.7em;
+    font-size: 1.5rem;
+    line-height: 1.7rem;
     vertical-align: middle;
-    margin-right:.6em;
     width:7%;
+    margin-bottom: 0.9rem;
+}
+
+.plusminus {
+	margin-top: -.2rem;
+}
+
+.fa-download {
+	margin-left: .3rem;
+    margin-top: .18rem;
 }
 
 button.menuButton:active {
 	transform: translateY(2px);
 }
 
-a.download {
-    font-size: 2em;
-    color: white;
-    vertical-align: middle;
-    display: inline-block;
-}
 
 button.bottom-right {
 	bottom: 0px;
