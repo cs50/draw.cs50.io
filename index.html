@@ -43,7 +43,8 @@
 		var erasing = false;
 
 		// time for menu to be out before hiding (in ms)
-		var menuHideDelta = 3000;
+		var menuHideDeltaDefault = 3000;
+		var menuHideDelta = menuHideDeltaDefault;
 		var menuLastTouched = -1;
 
 		// prevent right click to avoid pop-up menu
@@ -114,7 +115,9 @@
 		function showMenu() {
 			menuLastTouched = Date.now();
 			refreshDownload();
-			$("#custom").slideDown(400, function(){
+
+			// if we've swiped up a couple of times to keep the menu up longer
+			$("#customMenu").slideDown(400, function(){
 				hideMenu();
 			});
 		}
@@ -142,13 +145,17 @@
 
 		function hideMenu() {
 			// base case if the menu is hidden
-			if ($("#custom").css('display') == "none") {
+			if ($("#customMenu").css('display') == "none") {
 				return;
 			}
 
 			// check if we're longer than the menu hide delta
 			if (Date.now() - menuLastTouched > menuHideDelta) {
-				$("#custom").slideUp();
+				$("#customMenu").slideUp();
+
+				// reset the delta for hiding the menu to the default (in case someone has continuiously swiped to keep it open)
+				menuHideDelta = menuHideDeltaDefault;
+
 			} else {
 				// update the save function in case canvas is updated (refreshes the png in case of download)
 				refreshDownload();
@@ -279,12 +286,17 @@
 
 			// enable swipe at bottom left corner to show secret menu (auto-hides after 4 secs)
 			menuham.on('swipeup', function() {
+				// if the menu is already showing, delay it's hiding further
+				if ($("#customMenu").css('display') != 'none'){
+					menuHideDelta *= 2;
+				}
+
 				showMenu();
 			});
 
 			// manually hide the menu
 			menuham.on('swipedown', function() {
-				$("#custom").slideUp();
+				$("#customMenu").slideUp();
 			});
 
 			// setup hammer.js for the main canvas
@@ -465,7 +477,7 @@
 		<button id="mb" class="bottom-left hidden corner" onclick="undo();"></button>
 		<button class="bottom-right hidden corner" onclick="redo();"></button>
 		<canvas id="touch-me" resize></canvas>
-		<div id="custom">
+		<div id="customMenu">
 			<button class="menuButton plusminus" onclick="decreasePen();">-</button>
 			<span id="strokeIndicator" onclick="resetPen();">4</span>
 			<button class="menuButton plusminus" onclick="increasePen();">+</button>
