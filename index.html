@@ -148,7 +148,7 @@
 
 			// check if we're longer than the menu hide delta
 			if (Date.now() - menuLastTouched > menuHideDelta) {
-				// $("#custom").slideUp();
+				$("#custom").slideUp();
 			} else {
 				// update the save function in case canvas is updated (refreshes the png in case of download)
 				refreshDownload();
@@ -297,23 +297,16 @@
 			mc.on('panmove', function(ev) {
 				let layerCount = paper.project.layers.length;
 
-				// move all layers, not just the current active layer
+				// move all layers, not just the 
 				for (let i = 0; i < layerCount; i++) {
-
 					// special case and ski emoji layer, do not move
 					if (paper.project.layers[i].name == 'emojiLayer') {
 						continue;
-					};
+					}
 
 					// move erase layer and draw layer
-
-					// ENHANCEMENT: We don't sync layer position directly with ev center
-					// position, as it will cause the whole canvas suddenly move to the
-					// ev center position when touching canvas with 3 fingers.
-					// Instead, we use deltaX and deltaY instead
-
-					paper.project.layers[i].position.x = paper.project.layers[i].position.x + ev.deltaX/15;
-					paper.project.layers[i].position.y = paper.project.layers[i].position.y + ev.deltaY/15;
+					paper.project.layers[i].position.x = ev.center.x;
+					paper.project.layers[i].position.y = ev.center.y;
 				}
 			});
 
