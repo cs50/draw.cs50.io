@@ -24,8 +24,11 @@
 		var paths = [];
 		var hidden = [];
 		var undoAll = false;
-		var emojis = ["❤️", "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "💌", "💘", "💝", "💖", "💗", "💓", "💞", "💕", "👏", "✨", "🎈", "🎉", "🎊", "🦄", "☕", "👑", "💥", "💫", "🤠", "👻", "👽", "👾", "🤖", "😎"];
-
+		var emojis = ["❤️", "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂",
+									"🙃", "😉", "😊", "😇", "😺", "😸", "😹", "😻", "😼", "😽",
+									"🙀", "💌", "💘", "💝", "💖", "💗", "💓", "💞", "💕", "👏",
+									"✨", "🎈", "🎉", "🎊", "🦄", "☕", "👑", "💥", "💫", "🤠",
+									"👻", "👽", "👾", "🤖", "😎"];
 
 		// pen defaults
 		var backgroundColor = 'black';
@@ -294,16 +297,23 @@
 			mc.on('panmove', function(ev) {
 				let layerCount = paper.project.layers.length;
 
-				// move all layers, not just the 
+				// move all layers, not just the current active layer
 				for (let i = 0; i < layerCount; i++) {
+
 					// special case and ski emoji layer, do not move
 					if (paper.project.layers[i].name == 'emojiLayer') {
 						continue;
-					}
+					};
 
 					// move erase layer and draw layer
-					paper.project.layers[i].position.x = ev.center.x;
-					paper.project.layers[i].position.y = ev.center.y;
+
+					// ENHANCEMENT: We don't sync layer position directly with ev center
+					// position, as it will cause the whole canvas suddenly move to the
+					// ev center position when touching canvas with 3 fingers.
+					// Instead, we use deltaX and deltaY instead
+
+					paper.project.layers[i].position.x = paper.project.layers[i].position.x + ev.deltaX/15;
+					paper.project.layers[i].position.y = paper.project.layers[i].position.y + ev.deltaY/15;
 				}
 			});
 
@@ -388,8 +398,6 @@
 						} else if (ev.isFinal) {
 							// we're done erasing, complete erasing cleanup
 							finishErase();
-						
-							
 
 						// end action
 						} else {
