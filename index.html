@@ -266,22 +266,22 @@
 		}
 
 		function toggleRecognizersOff() {
-			console.log("recofnisers off")
+			console.log("recognizers off")
 			mc.get('draw').set({ enable: false });
 			mc.get('erase').set({ enable: false });
 			mc.get('bigErase').set({ enable: false });
-			mc.get('pan').set({ enable: false });
-			mc.get('clearScreen').set({ enable: false });
+			// mc.get('pan').set({ enable: false });
+			// mc.get('clearScreen').set({ enable: false });
 		}
 
 		function toggleRecognizersOn(time) {
 			setTimeout(function(){
-				console.log("recofnisers on")
+				console.log("recognizers on")
 				mc.get('draw').set({ enable: true });
 				mc.get('erase').set({ enable: true });
 				mc.get('bigErase').set({ enable: true });
-				mc.get('pan').set({ enable: true });
-				mc.get('clearScreen').set({ enable: true });
+				// mc.get('pan').set({ enable: true });
+				// mc.get('clearScreen').set({ enable: true });
 			}, time);	
 		}
 
@@ -290,29 +290,29 @@
 				case 'draw':
 					mc.get('erase').set({ enable: false });
 					mc.get('bigErase').set({ enable: false });
-					mc.get('pan').set({ enable: false });
-					mc.get('clearScreen').set({ enable: false });
+					// mc.get('pan').set({ enable: false });
+					// mc.get('clearScreen').set({ enable: false });
 				break;
 
 				case 'erase':
 					mc.get('draw').set({ enable: false });
 					mc.get('bigErase').set({ enable: false });
-					mc.get('pan').set({ enable: false });
-					mc.get('clearScreen').set({ enable: false });
+					// mc.get('pan').set({ enable: false });
+					// mc.get('clearScreen').set({ enable: false });
 				break;
 
 				case 'bigErase':
 					mc.get('draw').set({ enable: false });
 					mc.get('erase').set({ enable: false });
-					mc.get('pan').set({ enable: false });
-					mc.get('clearScreen').set({ enable: false });
+					// mc.get('pan').set({ enable: false });
+					// mc.get('clearScreen').set({ enable: false });
 				break;
 
 				case 'pan':
 					mc.get('draw').set({ enable: false });
 					mc.get('erase').set({ enable: false });
-					mc.get('bigErase').set({ enable: false });
-					mc.get('clearScreen').set({ enable: false });
+					// mc.get('bigErase').set({ enable: false });
+					// mc.get('clearScreen').set({ enable: false });
 				break;
 			}
 		}
@@ -369,22 +369,26 @@
 			
 			var bigErase = new Hammer.Pan({ event: 'bigErase', pointers: 3, threshold: 100});
 
-			var pan = new Hammer.Pan({ event: 'pan', pointers: 5});
+			// var pan = new Hammer.Pan({ event: 'pan', pointers: 5});
 
-			var clear = new Hammer.Swipe({ event: 'clearScreen', pointers: 10});
+			// var clear = new Hammer.Swipe({ event: 'clearScreen', pointers: 10});
 
 
-			draw.requireFailure([erase, bigErase, pan, clear]);
-			erase.requireFailure([draw, bigErase, pan, clear]);
-			bigErase.requireFailure([erase, pan, clear, draw]);
-			pan.requireFailure([draw, erase, bigErase, clear]);
-			clear.requireFailure([draw, erase, bigErase, pan]);
+			// draw.requireFailure([erase, bigErase, pan, clear]);
+			// erase.requireFailure([draw, bigErase, pan, clear]);
+			// bigErase.requireFailure([erase, pan, clear, draw]);
+			// pan.requireFailure([draw, erase, bigErase, clear]);
+			// clear.requireFailure([draw, erase, bigErase, pan]);
+
+			draw.requireFailure([erase, bigErase]);
+			erase.requireFailure([draw, bigErase]);
+			bigErase.requireFailure([erase, draw]);
 
 			mc.add(draw);
 			mc.add(erase);
 			mc.add(bigErase);
-			mc.add(pan);
-			mc.add(clear);
+			// mc.add(pan);
+			// mc.add(clear);
 
 			mc.on('draw drawstart drawend', function(ev){
 
@@ -529,45 +533,45 @@
 			})
 
 
-			mc.on('pan panstart panend', function(ev){
-				console.log("PAN");
+			// mc.on('pan panstart panend', function(ev){
+			// 	console.log("PAN");
 				
-				if (ev.type == 'panstart') {
-					// remember that this is the last action that we started
-					lastAction = 'pan';
-					lastEv = ev;
-					toggleRecognizersOffExcept(lastAction)
-					return;
-				}
+			// 	if (ev.type == 'panstart') {
+			// 		// remember that this is the last action that we started
+			// 		lastAction = 'pan';
+			// 		lastEv = ev;
+			// 		toggleRecognizersOffExcept(lastAction)
+			// 		return;
+			// 	}
 
-				if (ev.type =='panend') {
-					lastPanEnded = Date.now();
-					toggleRecognizersOn(recognizerDelay);
-					return;
-				}
+			// 	if (ev.type =='panend') {
+			// 		lastPanEnded = Date.now();
+			// 		toggleRecognizersOn(recognizerDelay);
+			// 		return;
+			// 	}
 
-				// take action on the middle part of the pan
-				let layerCount = paper.project.layers.length;
+			// 	// take action on the middle part of the pan
+			// 	let layerCount = paper.project.layers.length;
 
-				// move all layers, not just the 
-				for (let i = 0; i < layerCount; i++) {
-					// special case and ski emoji layer, do not move
-					if (paper.project.layers[i].name == 'emojiLayer') {
-						continue;
-					}
+			// 	// move all layers, not just the 
+			// 	for (let i = 0; i < layerCount; i++) {
+			// 		// special case and ski emoji layer, do not move
+			// 		if (paper.project.layers[i].name == 'emojiLayer') {
+			// 			continue;
+			// 		}
 
-					// figure out screen center
+			// 		// figure out screen center
 				
-					// figure out layer center of the last position
-					let layerX = paper.project.layers[i].position.x - lastEv.center.x;
-					let layerY = paper.project.layers[i].position.y - lastEv.center.y;
+			// 		// figure out layer center of the last position
+			// 		let layerX = paper.project.layers[i].position.x - lastEv.center.x;
+			// 		let layerY = paper.project.layers[i].position.y - lastEv.center.y;
 
-					// move the layers to the new xy position
-					paper.project.layers[i].position.x = layerX + ev.center.x;
-					paper.project.layers[i].position.y = layerY + ev.center.y;
-					lastEv = ev;
-				}
-			});
+			// 		// move the layers to the new xy position
+			// 		paper.project.layers[i].position.x = layerX + ev.center.x;
+			// 		paper.project.layers[i].position.y = layerY + ev.center.y;
+			// 		lastEv = ev;
+			// 	}
+			// });
 
 			// intercept all touch events to deal with 1 and 2 fingers
 			mc.on('hammer.input', function(ev) {
