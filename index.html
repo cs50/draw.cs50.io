@@ -40,12 +40,21 @@
 		// eraser defaults
 		var eraserColor = backgroundColor;
 		var eraserWeight = 100;
+		var bigEraseMultiplier = 8;
 		var erasing = false;
+		var lastPanEnded = Date.now();
 
 		// time for menu to be out before hiding (in ms)
 		var menuHideDeltaDefault = 3000;
 		var menuHideDelta = menuHideDeltaDefault;
 		var menuLastTouched = -1;
+
+		// moves
+		var lastEv = {center:{x:0,y:0}}
+
+		// last action to prevent defaults
+		var lastAction;
+		var recognizerDelay = 500;
 
 		// prevent right click to avoid pop-up menu
 		document.addEventListener('contextmenu', event => event.preventDefault());
@@ -77,10 +86,12 @@
 		// function to clear the screen
 		function clearScreen() {
 			paper.project.layers['defaultLayer'].removeChildren();
-			paper.view.draw();
 			hidden = [];
 			paths = [];
+			paper.view.draw();
 			menuLastTouched = Date.now();
+			toggleRecognizersOff();
+			toggleRecognizersOn(recognizerDelay);
 			clearEmojis();
 		}
 
@@ -140,7 +151,7 @@
 			erasing = false;
 
 			// now that we're done, change the ink color to white and change the blend mode, this acts as a mask, rather than painting black on top.  You see black on top if you download the png, unless you use this blend mode (acts like a clipping mask)
-			path.blendMode = 'destination-out';
+			paths[paths.length-1].blendMode = 'destination-out';
 		}
 
 		function hideMenu() {
@@ -212,9 +223,6 @@
 
 		function emojiRain(emojiCount) {
 
-			// temporary disable
-			return;
-
 			// get the layer for emojis
 			var layer = paper.project.layers['emojiLayer'];
 
@@ -232,7 +240,7 @@
 				let e = new paper.PointText({
 					content: emojis[i],
 					center: [0.0],
-					fontSize: "2em",
+					fontSize: "2rem",
 				});
 				let s = new paper.Symbol(e);
 				emojiSymbols.push(s);
@@ -255,6 +263,58 @@
 
 			// activate the default layer so it's not tied to the emoji layer
 			paper.project.layers['defaultLayer'].activate();
+		}
+
+		function toggleRecognizersOff() {
+			console.log("recofnisers off")
+			mc.get('draw').set({ enable: false });
+			mc.get('erase').set({ enable: false });
+			mc.get('bigErase').set({ enable: false });
+			mc.get('pan').set({ enable: false });
+			mc.get('clearScreen').set({ enable: false });
+		}
+
+		function toggleRecognizersOn(time) {
+			setTimeout(function(){
+				console.log("recofnisers on")
+				mc.get('draw').set({ enable: true });
+				mc.get('erase').set({ enable: true });
+				mc.get('bigErase').set({ enable: true });
+				mc.get('pan').set({ enable: true });
+				mc.get('clearScreen').set({ enable: true });
+			}, time);	
+		}
+
+		function toggleRecognizersOffExcept(r) {
+			switch (r) {
+				case 'draw':
+					mc.get('erase').set({ enable: false });
+					mc.get('bigErase').set({ enable: false });
+					mc.get('pan').set({ enable: false });
+					mc.get('clearScreen').set({ enable: false });
+				break;
+
+				case 'erase':
+					mc.get('draw').set({ enable: false });
+					mc.get('bigErase').set({ enable: false });
+					mc.get('pan').set({ enable: false });
+					mc.get('clearScreen').set({ enable: false });
+				break;
+
+				case 'bigErase':
+					mc.get('draw').set({ enable: false });
+					mc.get('erase').set({ enable: false });
+					mc.get('pan').set({ enable: false });
+					mc.get('clearScreen').set({ enable: false });
+				break;
+
+				case 'pan':
+					mc.get('draw').set({ enable: false });
+					mc.get('erase').set({ enable: false });
+					mc.get('bigErase').set({ enable: false });
+					mc.get('clearScreen').set({ enable: false });
+				break;
+			}
 		}
 
 		// The onFrame function is called up to 60 times a second:
@@ -303,10 +363,190 @@
 			mc = new Hammer.Manager(canvas);
 
 			// handle 3-finger pan
-			var pan = new Hammer.Pan({ pointers: 3 });
-			mc.add(pan);
+			var draw = new Hammer.Pan({ event: 'draw', pointers: 1, threshold: 10});
 
-			mc.on('panmove', function(ev) {
+			var erase = new Hammer.Pan({ event: 'erase', pointers: 2, threshold: 100});
+			
+			var bigErase = new Hammer.Pan({ event: 'bigErase', pointers: 3, threshold: 100});
+
+			var pan = new Hammer.Pan({ event: 'pan', pointers: 5});
+
+			var clear = new Hammer.Swipe({ event: 'clearScreen', pointers: 10});
+
+
+			draw.requireFailure([erase, bigErase, pan, clear]);
+			erase.requireFailure([draw, bigErase, pan, clear]);
+			bigErase.requireFailure([erase, pan, clear, draw]);
+			pan.requireFailure([draw, erase, bigErase, clear]);
+			clear.requireFailure([draw, erase, bigErase, pan]);
+
+			mc.add(draw);
+			mc.add(erase);
+			mc.add(bigErase);
+			mc.add(pan);
+			mc.add(clear);
+
+			mc.on('draw drawstart drawend', function(ev){
+
+				// begin action on first press
+				if (ev.type == 'drawstart') {
+					// remember that this is the last action that we started
+					lastAction = 'draw';
+					toggleRecognizersOffExcept(lastAction);
+
+					path = new paper.Path({
+						segments: [{ x: ev.center.x, y: ev.center.y }],
+						strokeColor: penColor,
+						strokeWidth: penWeight,
+						strokeCap: 'round',
+						fullySelected: false
+					});
+					paths.push(path);
+
+					// now that we've restarted history, don't remember previous undos
+					hidden = [];
+					return;
+				}
+
+				if (ev.type == 'drawend') {
+					// end draw
+					paths[paths.length - 1].simplify(8);
+
+					// special feature for pen touch
+					if (ev.pointerType == 'pen') {
+						emojiRain(250);
+					}
+
+					toggleRecognizersOn(recognizerDelay);
+					return;
+				}
+				
+					
+				// take action on the pointer moving
+				paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
+				return;
+			})
+
+			mc.on('erase erasestart eraseend', function(ev){
+
+			
+				// begin action on first press (this is often not called beacause the first event is when the first finger lands, then the middle event - in the else condition here - fires next)
+				if (ev.type == 'erasestart') {
+
+
+					// remember that this is the last action that we started
+					lastAction = 'erase';
+					toggleRecognizersOffExcept(lastAction);
+
+					// remember that we're erasing in case another finger accidentally hits the screen
+					erasing = true;
+
+					path = new paper.Path({
+						segments: [{ x: ev.center.x, y: ev.center.y }],
+						strokeColor: eraserColor,
+						strokeWidth: eraserWeight,
+						strokeCap: 'round',
+						fullySelected: false
+					});
+					paths.push(path);
+
+					return;
+				}
+
+				// do cleanup on erase
+				if (ev.type == 'eraseend') {
+					// we're done erasing, complete erasing cleanup
+					finishErase();
+					toggleRecognizersOn(recognizerDelay);
+
+					return;
+				} 
+
+				// take action on the middle parts of the move
+
+				// remember that we're erasing in case another finger accidentally hits the screen
+				erasing = true;
+
+				// we color the path and change the weight here because the first event often fires with the single finger landing first
+				paths[paths.length - 1].strokeColor = eraserColor;
+				paths[paths.length - 1].strokeWidth = eraserWeight;
+
+				// add the new point
+				paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
+				
+			});
+
+			mc.on('bigErase bigErasestart bigEraseend', function(ev){
+				// begin action on first press (this is often not called beacause the first event is when the first finger lands, then the middle event - in the else condition here - fires next)
+
+				if (ev.type == 'bigErasestart') {
+
+					// remember that this is the last action that we started
+					lastAction = 'bigErase';
+					toggleRecognizersOffExcept(lastAction);
+
+					// remember that we're erasing in case another finger accidentally hits the screen
+					erasing = true;
+
+					path = new paper.Path({
+						segments: [{ x: ev.center.x, y: ev.center.y }],
+						strokeColor: eraserColor,
+						strokeWidth: eraserWeight * bigEraseMultiplier,
+						strokeCap: 'round',
+						fullySelected: false
+					});
+					paths.push(path);
+
+					return;
+				}
+
+				// cleanup on big erase
+				if (ev.type == 'bigEraseend') {
+					// we're done erasing, complete erasing cleanup
+					finishErase();
+					toggleRecognizersOn(recognizerDelay);
+
+					return;
+				}
+
+				// take action on the move
+
+				// remember that we're erasing in case another finger accidentally hits the screen
+				erasing = true;
+
+				// we color the path and change the weight here because the first event often fires with the single finger landing first
+				paths[paths.length - 1].strokeColor = eraserColor;
+				paths[paths.length - 1].strokeWidth = eraserWeight * bigEraseMultiplier;
+
+				// add the new point
+				paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
+			});
+
+			mc.on('clearScreen', function(ev){
+				console.log('clear');
+				clearScreen();
+
+			})
+
+
+			mc.on('pan panstart panend', function(ev){
+				console.log("PAN");
+				
+				if (ev.type == 'panstart') {
+					// remember that this is the last action that we started
+					lastAction = 'pan';
+					lastEv = ev;
+					toggleRecognizersOffExcept(lastAction)
+					return;
+				}
+
+				if (ev.type =='panend') {
+					lastPanEnded = Date.now();
+					toggleRecognizersOn(recognizerDelay);
+					return;
+				}
+
+				// take action on the middle part of the pan
 				let layerCount = paper.project.layers.length;
 
 				// move all layers, not just the 
@@ -316,23 +556,17 @@
 						continue;
 					}
 
-					// move erase layer and draw layer
-					paper.project.layers[i].position.x = ev.center.x;
-					paper.project.layers[i].position.y = ev.center.y;
+					// figure out screen center
+				
+					// figure out layer center of the last position
+					let layerX = paper.project.layers[i].position.x - lastEv.center.x;
+					let layerY = paper.project.layers[i].position.y - lastEv.center.y;
+
+					// move the layers to the new xy position
+					paper.project.layers[i].position.x = layerX + ev.center.x;
+					paper.project.layers[i].position.y = layerY + ev.center.y;
+					lastEv = ev;
 				}
-			});
-
-			// disabled as not working well
-			// setup recognisers for 5 finger pinch
-			// var pinch = new Hammer.Pinch({ pointers: 5 });
-			// mc.add(pinch);
-
-			mc.on('pinchin', function(ev) {
-				paper.project.activeLayer.scale(0.99, new paper.Point(ev.center));
-			});
-
-			mc.on('pinchout', function(ev) {
-				paper.project.activeLayer.scale(1.01, new paper.Point(ev.center));
 			});
 
 			// intercept all touch events to deal with 1 and 2 fingers
@@ -341,106 +575,6 @@
 				// regardless of action, if it's the last part of the touch, update local storage
 				if (ev.isFinal) {
 					saveToLocalStorage();
-				}
-
-				// this corner case happens if you are erasing and put a third finger down before lifting your two fingers off of the screen
-				if (ev.maxPointers !== 2 && erasing == true) {
-					finishErase();
-				}
-
-				switch (ev.maxPointers) {
-
-					// handle 1 finger
-					case 1:
-						// begin action on first press
-						if (ev.isFirst) {
-							path = new paper.Path({
-								segments: [{ x: ev.center.x, y: ev.center.y }],
-								strokeColor: penColor,
-								strokeWidth: penWeight,
-								strokeCap: 'round',
-								fullySelected: false
-							});
-							paths.push(path);
-
-							// now that we've restarted history, don't remember previous undos
-							hidden = [];
-
-						} else if (ev.isFinal) {
-							// end draw
-							paths[paths.length - 1].simplify(8);
-
-							// special feature for pen touch
-							if (ev.pointerType == 'pen') {
-								emojiRain(250);
-							}
-						} else {
-							// take action on the pointer moving
-							paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
-						}
-						break;
-
-
-					// process 2 fingers
-					case 2:
-
-						// begin action on first press (this is often not called beacause the first event is when the first finger lands, then the middle event - in the else condition here - fires next)
-						if (ev.isFirst) {
-
-							// remember that we're erasing in case another finger accidentally hits the screen
-							erasing = true;
-
-							path = new paper.Path({
-								segments: [{ x: ev.center.x, y: ev.center.y }],
-								strokeColor: eraserColor,
-								strokeWidth: eraserWeight,
-								strokeCap: 'round',
-								fullySelected: false
-							});
-							paths.push(path);
-
-						// the last event of this stroke, do any cleanup
-						} else if (ev.isFinal) {
-							// we're done erasing, complete erasing cleanup
-							finishErase();
-
-						// end action
-						} else {
-							// take action on the move
-
-							// remember that we're erasing in case another finger accidentally hits the screen
-							erasing = true;
-
-							// we color the path and change the weight here because the first event often fires with the single finger landing first
-							paths[paths.length - 1].strokeColor = eraserColor;
-							paths[paths.length - 1].strokeWidth = eraserWeight;
-
-							// add the new point
-							paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
-						}
-						break;
-
-					case 3:
-					case 4:
-					case 5:
-					case 6:
-						// do nothing for 3-6 fingers here, handle in pinch mode
-						break;
-					case 7:
-					case 8:
-					case 9:
-					case 10:
-						// clear the screen on a press over
-
-						// clear the screen when hands are raised
-						if (ev.isFinal) {
-							if (Math.abs(ev.deltaTime) > 400) {
-								clearScreen();
-							}
-						}
-						break;
-					default:
-						return;
 				}
 			});
 
