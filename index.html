@@ -21,7 +21,6 @@
 		<script type="text/javascript" canvas="touch-me">
 		// defaults
 		var path;
-		var paths = [];
 		var hidden = [];
 		var undoAll = false;
 		var emojis = ["❤️", "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂",
@@ -50,18 +49,21 @@
 		// last action to prevent defaults
 		var lastAction;
 		var lastNumPointers;
+		var lastEv;
+
+		var debug = true;
 
 		// prevent right click to avoid pop-up menu
 		document.addEventListener('contextmenu', event => event.preventDefault());
 
 		function undo() {
 			// stop if there is nothing left to undo
-			if (paths.length < 1) {
+			if (paper.project.layers['defaultLayer'].children.length < 1) {
 				return;
 			}
 
 			// swap arrays and make element invisible
-			hidden.push(paths.pop());
+			hidden.push(paper.project.layers['defaultLayer'].children.pop());
 			hidden[hidden.length - 1].visible = false;
 			menuLastTouched = Date.now();
 		}
@@ -73,8 +75,8 @@
 			}
 
 			// swap arrays and make element visible
-			paths.push(hidden.pop());
-			paths[paths.length - 1].visible = true;
+			paper.project.layers['defaultLayer'].children.addChild(hidden.pop());
+			paper.project.layers['defaultLayer'].children.paths[paper.project.layers['defaultLayer'].children.length - 1].visible = true;
 			menuLastTouched = Date.now();
 		}
 
@@ -82,7 +84,6 @@
 		function clearScreen() {
 			paper.project.layers['defaultLayer'].removeChildren();
 			hidden = [];
-			paths = [];
 			paper.view.draw();
 			menuLastTouched = Date.now();
 			clearEmojis();
@@ -142,7 +143,7 @@
 		function finishErase() {
 
 			// now that we're done, change the ink color to white and change the blend mode, this acts as a mask, rather than painting black on top.  You see black on top if you download the png, unless you use this blend mode (acts like a clipping mask)
-			paths[paths.length-1].blendMode = 'destination-out';
+			paper.project.layers['defaultLayer'].lastChild.blendMode = 'destination-out';
 		}
 
 		function hideMenu() {
@@ -311,6 +312,10 @@
 
 			function startDraw(ev) {
 
+				if (debug) {
+					console.log("startDraw");
+				}
+
 				// remember that this is the last action that we started
 				lastAction = 'draw';
 
@@ -321,7 +326,7 @@
 					strokeCap: 'round',
 					fullySelected: false
 				});
-				paths.push(path);
+				paper.project.layers['defaultLayer'].addChildren(path);
 
 				// now that we've restarted history, don't remember previous undos
 				hidden = [];
@@ -329,17 +334,26 @@
 			}
 
 			function middleDraw(ev) {
+				if (debug) {
+					console.log("middleDraw");
+				}
 				// take action on the pointer moving
-				paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
+				paper.project.layers['defaultLayer'].lastChild.add({ x: ev.center.x, y: ev.center.y });
 				return;
 			}
 
 			function endDraw(ev) {
+				if (debug) {
+					console.log("endDraw");
+				}
 				// end draw
-				paths[paths.length - 1].simplify(8);
+				paper.project.layers['defaultLayer'].lastChild.simplify(8);
 
 				// special feature for pen touch
 				if (ev.pointerType == 'pen') {
+					if (debug) {
+						console.log("PEN");
+					}
 					// emojiRain(250);
 				}
 
@@ -351,6 +365,9 @@
 			 */
 			
 			function startErase(ev, bigErase = false) {
+				if (debug) {
+					console.log("startErase", bigErase);
+				}
 
 				if (!bigErase) {
 					// remember that this is the last action that we started
@@ -364,7 +381,7 @@
 						strokeCap: 'round',
 						fullySelected: false
 					});
-					paths.push(path);
+					paper.project.layers['defaultLayer'].addChild(path);
 
 					return;
 				} else {
@@ -379,23 +396,83 @@
 						strokeCap: 'round',
 						fullySelected: false
 					});
-					paths.push(path);
+					paper.project.layers['defaultLayer'].addChild(path);
 
 					return;
 				}
 			}
 
-			function endErase(ev, bigErase = false) {				
+			function middleErase(ev, bigErase = false) {
+				if (debug) {
+					console.log("middleErase");
+				}
+				// add the new point
+				paper.project.layers['defaultLayer'].lastChild.add({ x: ev.center.x, y: ev.center.y });
+			}
+
+			function endErase(ev, bigErase = false) {	
+				if (debug) {
+					console.log("endErase");
+				}			
 				// we're done erasing, complete erasing cleanup
 				finishErase();
 			}
 
-			function middleErase(ev, bigErase = false) {
-				// add the new point
-				paths[paths.length - 1].add({ x: ev.center.x, y: ev.center.y });
-			}
+			
 
 
+			/*
+			 *	 ACTIONS RELATED TO PANNING 
+			 */
+
+			 function startPan(ev) {
+			 	if (debug) {
+					console.log("startPan");
+				}
+			 	lastAction = 'pan';
+			 	lastEv = ev;
+			 	// always remove the last layer in strokes, it draw/erase ALWAYS happen before pan
+			 	paper.project.layers['defaultLayer'].removeChildren(paper.project.layers['defaultLayer'].lastChild.index);
+			 }
+
+			 function middlePan(ev) {
+
+			 	if (debug) {
+					console.log("middlePan");
+				}
+
+			 	// take action on the middle part of the pan
+				let layerCount = paper.project.layers.length;
+
+				// move all layers, not just the 
+				for (let i = 0; i < layerCount; i++) {
+					// special case and skip emoji layer, do not move
+					if (paper.project.layers[i].name == 'emojiLayer') {
+						continue;
+					}
+				
+					// figure out layer center of the last position
+					let layerX = paper.project.layers[i].position.x - lastEv.center.x;
+					let layerY = paper.project.layers[i].position.y - lastEv.center.y;
+
+					// move the layers to the new xy position
+					paper.project.layers[i].position.x = layerX + ev.center.x;
+					paper.project.layers[i].position.y = layerY + ev.center.y;
+					lastEv = ev;
+				}
+			 }
+
+			 function endPan(ev) {
+			 	if (debug) {
+					console.log("endPan");
+				}
+			 	// nothing to do
+			 }
+
+
+			/*
+			 *	 Handle all touch events
+			 */
 			// intercept all touch events to deal with 1 and 2 fingers
 			mc.on('hammer.input', function(ev) {
 
@@ -426,6 +503,10 @@
 					case 3:
 						startErase(ev, true);
 					break;
+
+					case 5:
+						startPan(ev);
+					break;
 				}
 			}
 
@@ -446,6 +527,10 @@
 					case 'erase':
 						middleErase(ev);
 					break;
+
+					case 'pan':
+						middlePan(ev);
+					break;
 				}
 			}
 			function finishCurrentAction(ev) {
@@ -458,31 +543,35 @@
 					case 'bigErase':
 						endErase(ev);
 					break;
+
+					case 'pan':
+						endPan(ev);
+					break;
 				}
 			}
 
 			// function called on every frame, use this to animate emojis in the background if they exist
-			// paper.view.onFrame = function(event) {
+			paper.view.onFrame = function(event) {
 
-			// 	// Run through the active layer's children list and change
-			// 	// the position of the placed symbols:
+				// Run through the active layer's children list and change
+				// the position of the placed symbols:
 
-			// 	if (paper.project.layers['emojiLayer'].hasChildren()) {
-			// 		for (var i = 0; i < paper.project.layers['emojiLayer'].children.length; i++) {
-			// 			var item = paper.project.layers['emojiLayer'].children[i];
+				if (paper.project.layers['emojiLayer'].hasChildren()) {
+					for (var i = 0; i < paper.project.layers['emojiLayer'].children.length; i++) {
+						var item = paper.project.layers['emojiLayer'].children[i];
 
-			// 			// Move the item 1/20th of its width to the right. This way
-			// 			// larger circles move faster than smaller circles:
-			// 			item.position.x += item.bounds.width / 20;
+						// Move the item 1/20th of its width to the right. This way
+						// larger circles move faster than smaller circles:
+						item.position.x += item.bounds.width / 20;
 
-			// 			// If the item has left the view on the right, move it back
-			// 			// to the left:
-			// 			if (item.bounds.left > paper.view.size.width) {
-			// 				item.position.x = -item.bounds.width;
-			// 			}
-			// 		}
-			// 	}
-			// };
+						// If the item has left the view on the right, move it back
+						// to the left:
+						if (item.bounds.left > paper.view.size.width) {
+							item.position.x = -item.bounds.width;
+						}
+					}
+				}
+			};
 
 		});
 		</script>
