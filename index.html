@@ -97,7 +97,9 @@
 
 		function decreasePen() {
 			// preserve minimum stroke of 4
-			if (penWeight >= 4){
+			if (penWeight >= 6){
+				// when pen weight is 6,
+				// next call on decreasePen() will decrease pen weight to 4 (minimum)
 				penWeight -= 2;
 				updateStrokeIndicator()
 			}
@@ -300,14 +302,14 @@
 
 			// setup hammer.js for the main canvas
 			mc = new Hammer.Manager(canvas);
-			
+
 			// add listener (else we won't get nearly as many events)
 			var pan = new Hammer.Pan({ pointers: 1 });
 			mc.add(pan);
 
 
 			/*
-			 *	 ACTIONS RELATED TO DRAWING 
+			 *	 ACTIONS RELATED TO DRAWING
 			 */
 
 			function startDraw(ev) {
@@ -361,9 +363,9 @@
 			}
 
 			/*
-			 *	 ACTIONS RELATED TO ERASING 
+			 *	 ACTIONS RELATED TO ERASING
 			 */
-			
+
 			function startErase(ev, bigErase = false) {
 				if (debug) {
 					console.log("startErase", bigErase);
@@ -410,19 +412,19 @@
 				paper.project.layers['defaultLayer'].lastChild.add({ x: ev.center.x, y: ev.center.y });
 			}
 
-			function endErase(ev, bigErase = false) {	
+			function endErase(ev, bigErase = false) {
 				if (debug) {
 					console.log("endErase");
-				}			
+				}
 				// we're done erasing, complete erasing cleanup
 				finishErase();
 			}
 
-			
+
 
 
 			/*
-			 *	 ACTIONS RELATED TO PANNING 
+			 *	 ACTIONS RELATED TO PANNING
 			 */
 
 			 function startPan(ev) {
@@ -444,13 +446,13 @@
 			 	// take action on the middle part of the pan
 				let layerCount = paper.project.layers.length;
 
-				// move all layers, not just the 
+				// move all layers, not just the
 				for (let i = 0; i < layerCount; i++) {
 					// special case and skip emoji layer, do not move
 					if (paper.project.layers[i].name == 'emojiLayer') {
 						continue;
 					}
-				
+
 					// figure out layer center of the last position
 					let layerX = paper.project.layers[i].position.x - lastEv.center.x;
 					let layerY = paper.project.layers[i].position.y - lastEv.center.y;
