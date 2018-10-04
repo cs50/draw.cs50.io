@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <!-- note, disable touch overscroll! https://www.addictivetips.com/web/disable-swipe-to-go-back-in-chrome/ -->
+<!-- https://github.com/socketio/socket.io/issues/1942, http://nginx.org/en/docs/http/websocket.html -->
 <html>
 
 	<head>
@@ -12,14 +13,17 @@
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
 
 		<!-- custom style sheet -->
-		<link rel="stylesheet" type="text/css" href="css/style.css">
+		<link rel="stylesheet" type="text/css" href="/css/style.css">
 
 		<!-- js libraries -->
 		<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-		<script src="js/hammer.js"></script>
-		<script src="js/paper-full.js"></script>
+		<script src="/js/hammer.js"></script>
+		<script src="/js/paper-full.js"></script>
+		<script src="/js/socket.io.js"></script>
+
 		<script type="text/javascript" canvas="touch-me">
 		// defaults
+		var socket = io({transports: ['websocket'], query: {room: window.location.pathname}});
 		var path;
 		var hidden = [];
 		var undoAll = false;
@@ -35,10 +39,11 @@
 		var penColor = defaultPenColor;
 		var defaultPenWeight = 4;
 		var penWeight = defaultPenWeight;
+		var defaultLayer = 'defaultLayer';
 
 		// eraser defaults
 		var eraserColor = backgroundColor;
-		var eraserWeight = 50;
+		var eraserWeight = 100;
 		var bigEraseMultiplier = 8;
 
 		// time for menu to be out before hiding (in ms)
@@ -50,39 +55,53 @@
 		var lastAction;
 		var lastNumPointers;
 		var lastEv;
+		var lastIndex;
 
-		var debug = false;
+		var debug = true;
+		var simulated = false;
+
+		// use sockets? not on the root page
+		var socketsActive = (window.location.pathname == "/" ? false : true);
 
 		// prevent right click to avoid pop-up menu
 		document.addEventListener('contextmenu', event => event.preventDefault());
 
-		function undo() {
+		function undo(fromSocket = false) {
 			// stop if there is nothing left to undo
-			if (paper.project.layers['defaultLayer'].children.length < 1) {
+			if (paper.project.layers[defaultLayer].children.length < 1) {
 				return;
 			}
 
 			// swap arrays and make element invisible
-			hidden.push(paper.project.layers['defaultLayer'].children.pop());
+			hidden.push(paper.project.layers[defaultLayer].children.pop());
 			hidden[hidden.length - 1].visible = false;
 			menuLastTouched = Date.now();
+
+			if (socketsActive && !fromSocket) {
+				socket.emit('undo', paper.project.layers[defaultLayer].children.length - 1);
+			}
 		}
 
+
+
 		// function to redo last undo
-		function redo() {
+		function redo(fromSocket = false) {
 			if (hidden.length < 1) {
 				return;
 			}
 
 			// swap arrays and make element visible
-			paper.project.layers['defaultLayer'].children.addChild(hidden.pop());
-			paper.project.layers['defaultLayer'].children.paths[paper.project.layers['defaultLayer'].children.length - 1].visible = true;
+			paper.project.layers[defaultLayer].addChild(hidden.pop());
+			paper.project.layers[defaultLayer].lastChild.visible = true;
 			menuLastTouched = Date.now();
+			if (socketsActive && !fromSocket) {
+				socket.emit('redo', hidden.length);
+			}
 		}
 
 		// function to clear the screen
 		function clearScreen() {
-			paper.project.layers['defaultLayer'].removeChildren();
+			paper.project.layers[defaultLayer].removeChildren();
 			hidden = [];
 			paper.view.draw();
 			menuLastTouched = Date.now();
@@ -97,9 +116,7 @@
 
 		function decreasePen() {
 			// preserve minimum stroke of 4
-			if (penWeight >= 6){
-				// when pen weight is 6,
-				// next call on decreasePen() will decrease pen weight to 4 (minimum)
+			if (penWeight >= 4){
 				penWeight -= 2;
 				updateStrokeIndicator()
 			}
@@ -142,10 +159,10 @@
 			}
 		}
 
-		function finishErase() {
+		function finishErase(index) {
 
 			// now that we're done, change the ink color to white and change the blend mode, this acts as a mask, rather than painting black on top.  You see black on top if you download the png, unless you use this blend mode (acts like a clipping mask)
-			paper.project.layers['defaultLayer'].lastChild.blendMode = 'destination-out';
+			paper.project.layers[defaultLayer].children[index].blendMode = 'destination-out';
 		}
 
 		function hideMenu() {
@@ -173,7 +190,7 @@
 		// updates the href on the save icon with a fresh png version of the canvas to download
 		function refreshDownload() {
 			let c = document.getElementById("touch-me");
-			let img = c.toDataURL('image/png').replace("image/png", "image/octet-stream");;
+			let img = c.toDataURL('image/png').replace("image/png", "image/octet-stream");
 			let d = new Date();
 
 			var datestring = d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate() + "-" + d.getHours() + d.getMinutes() + ".png";
@@ -255,7 +272,7 @@
 			layer.sendToBack();
 
 			// activate the default layer so it's not tied to the emoji layer
-			paper.project.layers['defaultLayer'].activate();
+			paper.project.layers[defaultLayer].activate();
 		}
 
 		// main function
@@ -265,6 +282,83 @@
 			var canvas = document.getElementById('touch-me');
 			paper.setup(canvas);
 			$("#touch-me").css("background-color", backgroundColor);
+
+
+
+			// don't activate socket event handlers on the root page (only on /boards/*)
+			if (socketsActive) {
+				console.log("sockets active");
+
+				// socket stuff
+				socket.on('boardState', function(data){
+					console.log("BOARD STATE", data);
+				});
+
+				socket.on('log', function(data) {
+					console.log("LOG", data);
+				});
+
+				socket.on('startDraw', function(index, path){
+					console.log("onStartDraw", index, path, paper.project.layers[defaultLayer].children)
+					try {
+						paper.project.layers[defaultLayer].insertChild(index, paper.importJSON(path));
+					} catch (e) {
+						console.log("Could not start draw", index, path);
+					}
+					paper.view.draw();
+				});
+
+				socket.on('updateDraw', function(index, xy){
+					// console.log(paper.project.layers[defaultLayer].children)
+					console.log("updateDraw", xy)
+					paper.project.layers[defaultLayer].children[index].add({ x: xy[0], y: xy[1] });
+					paper.view.draw();
+				});
+
+				socket.on('endDraw', function(index) {
+					paper.project.layers[defaultLayer].children[index].simplify(8);
+				});
+
+				socket.on('startErase', function(index, path){
+					console.log("onStartErase");
+					try {
+						paper.project.layers[defaultLayer].insertChild(index, paper.importJSON(path));
+					} catch (e) {
+						console.log("Could not start erase", index, path);
+					}
+					paper.view.draw();
+				});
+
+				socket.on('updateErase', function(index, xy){
+					// console.log(paper.project.layers[defaultLayer].children)
+					console.log("updateErase", xy)
+					paper.project.layers[defaultLayer].children[index].add({ x: xy[0], y: xy[1] });
+					paper.view.draw();
+				});
+
+				socket.on('endErase', function(index) {
+					console.log("endErase", index);
+					finishErase(index);
+				});
+
+				socket.on('undo', function(index) {
+					console.log("undo", index);
+					undo(true);
+				});
+
+				socket.on('redo', function(index) {
+					console.log("redo", index);
+					redo(true);
+				});
+
+				socket.on('pan', function(x, y){
+					paper.project.layers[defaultLayer].position.x = x;
+				paper.project.layers[defaultLayer].position.y = y;
+					paper.view.draw();
+				})
+
+				
+			};
 
 			// display default size/color of the stroke in the menu
 			updateStrokeIndicator();
@@ -278,7 +372,7 @@
 			layer.name ="defaultLayer";
 
 			// activate the default layer
-			paper.project.layers['defaultLayer'].activate();
+			paper.project.layers[defaultLayer].activate();
 
 			// setup hammer.js for the bottom left corner for the secret menu
 			var swipeMenu = new Hammer.Manager(document.getElementById('mb'));
@@ -302,15 +396,16 @@
 
 			// setup hammer.js for the main canvas
 			mc = new Hammer.Manager(canvas);
-
+			
 			// add listener (else we won't get nearly as many events)
 			var pan = new Hammer.Pan({ pointers: 1 });
 			mc.add(pan);
 
 
 			/*
-			 *	 ACTIONS RELATED TO DRAWING
+			 *	 ACTIONS RELATED TO DRAWING 
 			 */
+
 
 			function startDraw(ev) {
 
@@ -328,19 +423,33 @@
 					strokeCap: 'round',
 					fullySelected: false
 				});
-				paper.project.layers['defaultLayer'].addChildren(path);
+
+				let p = paper.project.layers[defaultLayer].addChild(path);
+
+				lastIndex = p.index;
+				console.log("START DRAW", p)
+				if (socketsActive) {
+					socket.emit('startDraw', p.index, p.exportJSON());
+				}
 
 				// now that we've restarted history, don't remember previous undos
-				hidden = [];
+				// hidden = [];
+				console.log("done startDraw")
 				return;
 			}
 
 			function middleDraw(ev) {
 				if (debug) {
-					console.log("middleDraw");
+					// console.log("middleDraw", lastIndex, paper.project.layers[defaultLayer].children[lastIndex]);
+					console.log("start middle draw");
 				}
+				console.log("middleDraw", ev.center);
 				// take action on the pointer moving
-				paper.project.layers['defaultLayer'].lastChild.add({ x: ev.center.x, y: ev.center.y });
+				paper.project.layers[defaultLayer].children[lastIndex].add({ x: ev.center.x, y: ev.center.y });
+				if (socketsActive) {
+					socket.emit('updateDraw', lastIndex, [ev.center.x, ev.center.y]);
+				}
+				console.log("end middle draw");
 				return;
 			}
 
@@ -349,7 +458,10 @@
 					console.log("endDraw");
 				}
 				// end draw
-				paper.project.layers['defaultLayer'].lastChild.simplify(8);
+				paper.project.layers[defaultLayer].lastChild.simplify(8);
+				if (socketsActive) {
+					socket.emit('endDraw', lastIndex);
+				}
 
 				// special feature for pen touch
 				if (ev.pointerType == 'pen') {
@@ -363,13 +475,14 @@
 			}
 
 			/*
-			 *	 ACTIONS RELATED TO ERASING
+			 *	 ACTIONS RELATED TO ERASING 
 			 */
-
+			
 			function startErase(ev, bigErase = false) {
 				if (debug) {
 					console.log("startErase", bigErase);
 				}
+				var p;
 
 				if (!bigErase) {
 					// remember that this is the last action that we started
@@ -383,9 +496,7 @@
 						strokeCap: 'round',
 						fullySelected: false
 					});
-					paper.project.layers['defaultLayer'].addChild(path);
-
-					return;
+					
 				} else {
 					// remember that this is the last action that we started
 					lastAction = 'bigErase';
@@ -398,10 +509,19 @@
 						strokeCap: 'round',
 						fullySelected: false
 					});
-					paper.project.layers['defaultLayer'].addChild(path);
 
-					return;
+					
+
 				}
+
+				p = paper.project.layers[defaultLayer].addChild(path);
+				console.log("START ERASE", p, socketsActive);
+
+				lastIndex = p.index;
+				if (socketsActive) {
+					socket.emit('startErase', p.index, p.exportJSON());
+				}
+				return;
 			}
 
 			function middleErase(ev, bigErase = false) {
@@ -409,22 +529,31 @@
 					console.log("middleErase");
 				}
 				// add the new point
-				paper.project.layers['defaultLayer'].lastChild.add({ x: ev.center.x, y: ev.center.y });
+				paper.project.layers[defaultLayer].lastChild.add({ x: ev.center.x, y: ev.center.y });
+
+				if (socketsActive) {
+					socket.emit('updateErase', lastIndex, [ev.center.x, ev.center.y]);
+				}
 			}
 
-			function endErase(ev, bigErase = false) {
+			function endErase(ev, bigErase = false) {	
 				if (debug) {
 					console.log("endErase");
+				}			
+
+				if (socketsActive) {
+					socket.emit('endErase', lastIndex);
 				}
+
 				// we're done erasing, complete erasing cleanup
-				finishErase();
+				finishErase(lastIndex);
 			}
 
-
+			
 
 
 			/*
-			 *	 ACTIONS RELATED TO PANNING
+			 *	 ACTIONS RELATED TO PANNING 
 			 */
 
 			 function startPan(ev) {
@@ -433,8 +562,10 @@
 				}
 			 	lastAction = 'pan';
 			 	lastEv = ev;
-			 	// always remove the last layer in strokes, it draw/erase ALWAYS happen before pan
-			 	paper.project.layers['defaultLayer'].removeChildren(paper.project.layers['defaultLayer'].lastChild.index);
+			 	// always remove the last layer in strokes, it draw/erase ALWAYS happen before pan (unless simulated)
+			 	if (!simulated) {
+			 		paper.project.layers[defaultLayer].removeChildren(paper.project.layers[defaultLayer].lastChild.index);
+			 	}
 			 }
 
 			 function middlePan(ev) {
@@ -446,21 +577,18 @@
 			 	// take action on the middle part of the pan
 				let layerCount = paper.project.layers.length;
 
-				// move all layers, not just the
-				for (let i = 0; i < layerCount; i++) {
-					// special case and skip emoji layer, do not move
-					if (paper.project.layers[i].name == 'emojiLayer') {
-						continue;
-					}
+				// figure out layer center of the last position
+				let layerX = paper.project.layers[defaultLayer].position.x - lastEv.center.x;
+				let layerY = paper.project.layers[defaultLayer].position.y - lastEv.center.y;
 
-					// figure out layer center of the last position
-					let layerX = paper.project.layers[i].position.x - lastEv.center.x;
-					let layerY = paper.project.layers[i].position.y - lastEv.center.y;
+				// move the layers to the new xy position
+				paper.project.layers[defaultLayer].position.x = layerX + ev.center.x;
+				paper.project.layers[defaultLayer].position.y = layerY + ev.center.y;
+				lastEv = ev;
 
-					// move the layers to the new xy position
-					paper.project.layers[i].position.x = layerX + ev.center.x;
-					paper.project.layers[i].position.y = layerY + ev.center.y;
-					lastEv = ev;
+
+			 	if (socketsActive) {
+			 		socket.emit('pan', paper.project.layers[defaultLayer].position.x, paper.project.layers[defaultLayer].position.y);
 				}
 			 }
 
@@ -477,6 +605,20 @@
 			 */
 			// intercept all touch events to deal with 1 and 2 fingers
 			mc.on('hammer.input', function(ev) {
+				// console.log(ev);
+				// let the shift key simulate 2 fingers, cmd key simulate 3 fingers, cmd + shift simulate 5 fingers
+				if (ev.srcEvent.shiftKey && ev.srcEvent.metaKey) {
+					ev.maxPointers = 5;
+					simulated = true;
+				} else if (ev.srcEvent.shiftKey) {
+					ev.maxPointers = 2;
+					simulated = true;
+				} else if (ev.srcEvent.metaKey) {
+					ev.maxPointers = 3;
+					simulated = true;
+				} else {
+					simulated = false;
+				}
 
 				// start processing events / actions
 				if (ev.isFirst) {
