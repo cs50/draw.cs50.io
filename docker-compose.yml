@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    container_name: app_web
+    # environment:
+      # NODE_ENV: development
+      # APPLICATION_ENV: dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/var/www
+      - /var/www/node_modules
+version: "2.1"
