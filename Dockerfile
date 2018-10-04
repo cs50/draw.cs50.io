@@ -4,5 +4,4 @@ FROM cs50/server
 EXPOSE 8080
 
 WORKDIR /var/www
-RUN npm install --loglevel verbose
-RUN pwd && ls
+RUN npm install
