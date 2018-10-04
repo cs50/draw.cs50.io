@@ -11,7 +11,7 @@ const port = 8080;
 var board = [];
 var cnt = 0;
 
-app.get('/boards/*', function(req, res){
+app.get('*', function(req, res){
     // req.url
   res.sendFile(path.join(__dirname + '/public/index.html'))
 });
