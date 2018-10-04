@@ -1,0 +1,10 @@
+language: node_js
+script: true
+deploy:
+  provider: elasticbeanstalk
+  access_key_id: "$AWS_ACCESS_KEY_ID"
+  secret_access_key: "$AWS_SECRET_ACCESS_KEY"
+  region: us-east-1
+  app: draw50
+  env: draw50
+  bucket_name: travis50
