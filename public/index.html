@@ -166,6 +166,7 @@
 		}
 
 		function hideMenu() {
+
 			// base case if the menu is hidden
 			if ($("#customMenu").css('display') == "none") {
 				return;
@@ -284,7 +285,6 @@
 			$("#touch-me").css("background-color", backgroundColor);
 
 
-
 			// don't activate socket event handlers on the root page (only on /boards/*)
 			if (socketsActive) {
 				console.log("sockets active");
@@ -375,8 +375,10 @@
 			paper.project.layers[defaultLayer].activate();
 
 			// setup hammer.js for the bottom left corner for the secret menu
-			var swipeMenu = new Hammer.Manager(document.getElementById('mb'));
+			var swipeMenu = new Hammer.Manager(document.getElementById('menuSwipeDetector'));
+			var customMenuElement = new Hammer.Manager(document.getElementById('customMenu'));
 			var swipe = new Hammer.Swipe();
+			customMenuElement.add(swipe);
 			swipeMenu.add(swipe);
 
 			// enable swipe at bottom left corner to show secret menu (auto-hides after 4 secs)
@@ -389,8 +391,22 @@
 				showMenu();
 			});
 
+			customMenuElement.on('swipeup', function() {
+				// if the menu is already showing, delay it's hiding further
+				if ($("#customMenu").css('display') != 'none'){
+					menuHideDelta *= 2;
+				}
+
+				showMenu();
+			});
+
 			// manually hide the menu
 			swipeMenu.on('swipedown', function() {
+				$("#customMenu").slideUp();
+			});
+
+			// manually hide the menu
+			customMenuElement.on('swipedown', function() {
 				$("#customMenu").slideUp();
 			});
 
@@ -724,9 +740,10 @@
 	<body>
 		<button class="top-left hidden corner" onclick="undo();"></button>
 		<button class="top-right hidden corner" onclick="redo();"></button>
-		<button id="mb" class="bottom-left hidden corner" onclick="undo();"></button>
+		<button id="menu" class="bottom-left hidden corner" onclick="undo();"></button>
 		<button class="bottom-right hidden corner" onclick="redo();"></button>
 		<canvas id="touch-me" resize></canvas>
+		<div id="menuSwipeDetector"></div>
 		<div id="customMenu">
 			<button class="menuButton plusminus" onclick="decreasePen();">-</button>
 			<span id="strokeIndicator" onclick="resetPen();">4</span>
