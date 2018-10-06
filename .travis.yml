@@ -1,0 +1,14 @@
+language: node_js
+script: true
+deploy:
+  provider: elasticbeanstalk
+  access_key_id: "$AWS_ACCESS_KEY_ID"
+  secret_access_key: "$AWS_SECRET_ACCESS_KEY"
+  region: us-east-1
+  app: draw50
+  env: draw50-1
+  bucket_name: travis50
+  on: interactive
+notifications:
+  slack:
+    secure: RIrb/XZiqHThYqlNY80+SfYPLr5AkhfHbBl00riNXkIIlXSK0x6FoZRRHSoe+vh7CUAEJl08jFfI2zDDVaJ9/N1Up8+H3y24sTIdPvH3zd3WYCsr/7AGwL9C7yQqUUBETaPX21smkarqrhEc47c1rdchxWGYn4YYyJxAd3A1QeKpIG1lev6s8imgZ5cFXoDptubm2UmZcsQypa0/yOYMwvFKFEHmV5xW32V1r7NCx/zBDQajpdCfVQipAeTzAPtB/d6gwZT1IWA7aqkiLV2jrHPYhj/42G3WKQjlxxB/IeN0qSjnkgRQhTCkld1zUzgrPkV04BIb258TvmpWyg01Hdw/LcBgnpAWogNEjqaD1sjDv8WxV3gE+IyT6d8mX6S8ISVQQrNBxIhJttP22+dLZxsFDUjfHfg+ajetuoDiY7vLbc1Ga0IQAXyonyBSqahKi2faY+jABTeXM8B12XfsHe6o8fr9wdGkPyzKoMH3xgPLRs9iqG/fT8SSwzDqEsX10Dc0ee3fY7CI9Mri3wtIe40/FQurX562eLYSInmwO7lg9Wp5f5GbxCqw4W84QCZiAGiN+6coaQLLtn4GwDGxsEEmXfnBvCqRNdX/P92pN8msNnVWgMuWAIq0ANuDM9bqpbk6vozuAJencYcKk1C5yN+aGOIFnRhqfNjDePQYOWk=
