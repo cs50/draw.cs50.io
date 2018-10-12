@@ -299,7 +299,7 @@
 				});
 
 				socket.on('startDraw', function(index, path){
-					console.log("onStartDraw", index, path, paper.project.layers[defaultLayer].children)
+					console.log("onStartDraw " + index, path, paper.project.layers[defaultLayer].children)
 					try {
 						paper.project.layers[defaultLayer].insertChild(index, paper.importJSON(path));
 					} catch (e) {
@@ -310,34 +310,46 @@
 
 				socket.on('updateDraw', function(index, xy){
 					// console.log(paper.project.layers[defaultLayer].children)
-					console.log("updateDraw", xy)
+					console.log("onUpdateDraw " + index, xy)
+
+					// don't do anything if this layer hasn't yet been inserted
+					if (paper.project.layers[defaultLayer].children[index] == undefined) {
+						console.log("onUpdateDraw but layer doesn't yet exist", index)
+						return;
+					}
 					paper.project.layers[defaultLayer].children[index].add({ x: xy[0], y: xy[1] });
 					paper.view.draw();
 				});
 
 				socket.on('endDraw', function(index) {
+					// don't do anything if this layer hasn't yet been inserted
+					console.log("onEndDraw " + index);
+					if (paper.project.layers[defaultLayer].children[index] == undefined) {
+						console.log("onEndDraw but layer doesn't yet exist", index)
+						return;
+					}
 					paper.project.layers[defaultLayer].children[index].simplify(8);
 				});
 
-				socket.on('startErase', function(index, path){
-					console.log("onStartErase");
-					try {
-						paper.project.layers[defaultLayer].insertChild(index, paper.importJSON(path));
-					} catch (e) {
-						console.log("Could not start erase", index, path);
-					}
-					paper.view.draw();
-				});
+				// socket.on('startErase', function(index, path){
+				// 	console.log("onStartErase");
+				// 	try {
+				// 		paper.project.layers[defaultLayer].insertChild(index, paper.importJSON(path));
+				// 	} catch (e) {
+				// 		console.log("Could not start erase", index, path);
+				// 	}
+				// 	paper.view.draw();
+				// });
 
-				socket.on('updateErase', function(index, xy){
-					// console.log(paper.project.layers[defaultLayer].children)
-					console.log("updateErase", xy)
-					paper.project.layers[defaultLayer].children[index].add({ x: xy[0], y: xy[1] });
-					paper.view.draw();
-				});
+				// socket.on('updateErase', function(index, xy){
+				// 	// console.log(paper.project.layers[defaultLayer].children)
+				// 	console.log("updateErase", xy)
+				// 	paper.project.layers[defaultLayer].children[index].add({ x: xy[0], y: xy[1] });
+				// 	paper.view.draw();
+				// });
 
 				socket.on('endErase', function(index) {
-					console.log("endErase", index);
+					console.log("onEndErase " + index);
 					finishErase(index);
 				});
 
@@ -440,43 +452,60 @@
 					fullySelected: false
 				});
 
-				let p = paper.project.layers[defaultLayer].addChild(path);
-
-				lastIndex = p.index;
-				console.log("START DRAW", p)
 				if (socketsActive) {
-					socket.emit('startDraw', p.index, p.exportJSON());
-				}
+					lastIndex = -1;
+					socket.emit('startDraw', path.exportJSON(), function(idx) {
+						let p = paper.project.layers[defaultLayer].insertChild(idx, path);
 
-				// now that we've restarted history, don't remember previous undos
-				// hidden = [];
-				console.log("done startDraw")
-				return;
+						lastIndex = idx;
+						console.log("START DRAW in socket - stored", p)
+
+					});
+				} else {
+					let p = paper.project.layers[defaultLayer].addChild(path);
+
+					lastIndex = p.index;
+					console.log("START DRAW non-socket - stored", p)
+				}
 			}
 
 			function middleDraw(ev) {
 				if (debug) {
 					// console.log("middleDraw", lastIndex, paper.project.layers[defaultLayer].children[lastIndex]);
-					console.log("start middle draw");
+					// console.log("start middle draw");
 				}
-				console.log("middleDraw", ev.center);
+				console.log("middleDraw " + lastIndex, ev.center);
 				// take action on the pointer moving
+
+				// wait to get our index before touching anything
+				if (lastIndex == -1) {
+					return;
+				} else if (paper.project.layers[defaultLayer].children[lastIndex] == undefined) {
+					console.log("Error with middleDraw, layer doesn't exist at index: ", lastIndex);
+				}
 				paper.project.layers[defaultLayer].children[lastIndex].add({ x: ev.center.x, y: ev.center.y });
 				if (socketsActive) {
 					socket.emit('updateDraw', lastIndex, [ev.center.x, ev.center.y]);
 				}
-				console.log("end middle draw");
+				// console.log("end middle draw");
 				return;
 			}
 
 			function endDraw(ev) {
 				if (debug) {
-					console.log("endDraw");
+					console.log("endDraw " + lastIndex);
 				}
+
+				// wait to get our index before touching anything
+				if (lastIndex == -1) {
+					return;
+				}
+
 				// end draw
-				paper.project.layers[defaultLayer].lastChild.simplify(8);
+				paper.project.layers[defaultLayer].children[lastIndex].simplify(8);
 				if (socketsActive) {
-					socket.emit('endDraw', lastIndex);
+					socket.emit('endDraw', lastIndex, paper.project.layers[defaultLayer].children[lastIndex]);
+					lastIndex = -1;
 				}
 
 				// special feature for pen touch
@@ -525,40 +554,64 @@
 						strokeCap: 'round',
 						fullySelected: false
 					});
-
-					
-
 				}
 
-				p = paper.project.layers[defaultLayer].addChild(path);
-				console.log("START ERASE", p, socketsActive);
-
-				lastIndex = p.index;
 				if (socketsActive) {
-					socket.emit('startErase', p.index, p.exportJSON());
+					lastIndex = -1;
+					// use start draw on the back end since it's the same logic
+					socket.emit('startDraw', path.exportJSON(), function(idx) {
+						let p = paper.project.layers[defaultLayer].insertChild(idx, path);
+
+						lastIndex = idx;
+						console.log("START DRAW (REALLY ERASE) in socket - stored" +  lastIndex)
+
+					});
+				} else {
+					let p = paper.project.layers[defaultLayer].addChild(path);
+
+					lastIndex = p.index;
+					console.log("START ERASE non-socket - stored", p)
 				}
 				return;
 			}
 
 			function middleErase(ev, bigErase = false) {
 				if (debug) {
-					console.log("middleErase");
+					console.log("middleErase " + lastIndex + " isLastIndex+update(Draw)");
 				}
+
+				// wait to get our index before touching anything
+				if (lastIndex == -1) {
+					return;
+				} else if (paper.project.layers[defaultLayer].children[lastIndex] == undefined) {
+					console.log("Error with middleErase, layer doesn't exist at index: ", lastIndex);
+				}
+
 				// add the new point
-				paper.project.layers[defaultLayer].lastChild.add({ x: ev.center.x, y: ev.center.y });
+				paper.project.layers[defaultLayer].children[lastIndex].add({ x: ev.center.x, y: ev.center.y });
 
 				if (socketsActive) {
-					socket.emit('updateErase', lastIndex, [ev.center.x, ev.center.y]);
+					// same logic as drawing
+					socket.emit('updateDraw', lastIndex, [ev.center.x, ev.center.y]);
 				}
 			}
 
 			function endErase(ev, bigErase = false) {	
 				if (debug) {
-					console.log("endErase");
-				}			
+					console.log("endErase " + lastIndex + " isLastIndex+end(Draw)");
+				}	
+
+				// wait to get our index before touching anything
+				if (lastIndex == -1) {
+					return;
+				}		
 
 				if (socketsActive) {
-					socket.emit('endErase', lastIndex);
+					socket.emit('endDraw', lastIndex, paper.project.layers[defaultLayer].children[lastIndex], true);
+					finishErase(lastIndex);
+					lastIndex = -1;
+					return;
+
 				}
 
 				// we're done erasing, complete erasing cleanup

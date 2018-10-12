@@ -2,12 +2,40 @@ services:
   web:
     build: .
     container_name: app_web
-    # environment:
-      # NODE_ENV: development
-      # APPLICATION_ENV: dev
+    environment:
+      MYSQL_HOST: db
+      MYSQL_CONNECT_LIMIT: 50
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: draw50
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpw
+      MYSQL_PORT: 3306
+      MYSQL_DB: draw50
     ports:
       - "8080:8080"
     volumes:
       - .:/var/www
       - /var/www/node_modules
+  db:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: draw50
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpw
+      MYSQL_PORT: 3306
+      MYSQL_DB: draw50
+
+    ports:
+      - "3306:3306"
+    volumes:
+      - "./db:/var/lib/mysql"
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8080
 version: "2.1"
