@@ -72,13 +72,21 @@
 				return;
 			}
 
-			// swap arrays and make element invisible
-			hidden.push(paper.project.layers[defaultLayer].children.pop());
-			hidden[hidden.length - 1].visible = false;
-			menuLastTouched = Date.now();
-
+		
 			if (socketsActive && !fromSocket) {
-				socket.emit('undo', paper.project.layers[defaultLayer].children.length - 1);
+				socket.emit('undo', paper.project.layers[defaultLayer].children.length - 1, function(success) {
+					if (success) {
+						// swap arrays and make element invisible
+						hidden.push(paper.project.layers[defaultLayer].children.pop());
+						hidden[hidden.length - 1].visible = false;
+						menuLastTouched = Date.now();
+					}
+				});
+			} else {
+				// swap arrays and make element invisible
+				hidden.push(paper.project.layers[defaultLayer].children.pop());
+				hidden[hidden.length - 1].visible = false;
+				menuLastTouched = Date.now();
 			}
 		}
 

@@ -58,7 +58,7 @@ io.on('connection', function(socket) {
 
             // INSERT UNLESS KEY EXIST:
             // Use the connection
-                            console.log("abotu to select")
+            console.log("abotu to select")
 
             connection.query("SELECT * FROM boards LEFT JOIN paths on boards.name = paths.board WHERE boards.name = " + mysql.escape(thisBoard), function(error, results, fields) {
                 console.log("in seelct")
@@ -117,6 +117,11 @@ io.on('connection', function(socket) {
         // path[1].segments = [];
         console.log("THIS PATH", path);
 
+        insertPath(path,cb);
+
+    }); 
+
+    function insertPath(path, cb) {
         // insert/get next ID from DB
         pool.getConnection(function(err, connection) {
             if (err) throw err; // not connected!
@@ -166,12 +171,14 @@ io.on('connection', function(socket) {
                     connection.query('INSERT INTO paths (board, idx, json_string) VALUES (?, ?, ?)', [thisBoard, (idx + 1), JSON.stringify(path)], function(error, iresults, fields) {
                         // check for error, cancel the transaction
                         if (error) { 
-                            return connection.rollback(function(){
-                                connection.release();
-                                console.log("connection released err", --connections);
-                                throw error;
-                            }
-                        )}
+                            return connection.rollback(
+                                function(){
+                                    connection.release();
+                                    console.log("connection released err", --connections);
+                                    throw error;
+                                }
+                            )
+                        }
 
                         connection.commit(function(error){
                             // check for error, cancel the transaction
@@ -200,7 +207,7 @@ io.on('connection', function(socket) {
                 });
             });
         });
-    }); 
+    }
 
     socket.on('updateDraw', function(childrenIndex, xy) {
         // console.log("update DRAW", xy, board);
@@ -252,28 +259,39 @@ io.on('connection', function(socket) {
     });
 
 
-    // socket.on('startErase', function(childrenIndex, path) {
-    //     console.log("startErase");
-    //     socket.to(thisBoard).emit('startErase', childrenIndex, path);
-    // });
-
-    // socket.on('updateErase', function(childrenIndex, xy) {
-    //     console.log("updateErase");
-    //     socket.to(thisBoard).emit('updateErase', childrenIndex, xy);
-    // });
-
-    // socket.on('endErase', function(index) {
-    //     console.log("endErase");
-    //     socket.to(thisBoard).emit('endErase', index);
-    // });
-
-    socket.on('undo', function(index) {
+    socket.on('undo', function(index, cb) {
         console.log("undo");
-        socket.to(thisBoard).emit('undo', index);
+
+        // insert/get next ID from DB
+        pool.getConnection(function(err, connection) {
+            if (err) throw err; // not connected!
+
+            console.log("connection acquired", ++connections);
+
+            connection.query("DELETE FROM paths WHERE board = ? AND idx = ?", [thisBoard, index], function(error, qresults, fields) {
+
+                // check for error, cancel the transaction
+                if (error) { 
+                    return connection.rollback(
+                        function(){
+                            connection.release();
+                            console.log("connection released err", --connections);
+                            cb(false);
+                            throw error;
+                        }
+                    )
+                }
+
+                cb(true);
+                socket.to(thisBoard).emit('undo', index);
+                connection.release();
+            });
+        });
     });
 
     socket.on('redo', function(index) {
         console.log("redo");
+
         socket.to(thisBoard).emit('redo', index);
     });
 
