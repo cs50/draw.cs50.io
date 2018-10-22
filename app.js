@@ -19,8 +19,7 @@ var pool = mysql.createPool({
     database: process.env.MYSQL_DB,
     supportBigNumbers: true
 });
-// console.log("env vars", process.env, process.env.MYSQL_HOST, process.env.MYSQL_CONNECT_LIMIT, process.env.MYSQL_USER)
-// console.log("POOL", pool);
+
 
 app.get('*', function(req, res) {
     // req.url
@@ -33,7 +32,7 @@ io.on('connection', function(socket) {
 
     console.log('user connected--------------------------------', socket.handshake.headers.referer, socket.id);
     //http://paperjs.org/reference/pathitem/#datas
-    let re = new RegExp(/\/boards\/([a-zA-Z0-9]+)/);
+    let re = new RegExp(/\/([a-zA-Z0-9]+)/);
 
     // result[1] should be the part after http://url/boards/<this_part>
     let result = socket.handshake.query.room.match(re);
@@ -44,7 +43,7 @@ io.on('connection', function(socket) {
 
     let thisBoard = result[1];
 
-    console.log("thisBoard", thisBoard);
+    // console.log("thisBoard", thisBoard);
 
 
     // we have a specifc board, subscribe the user to the room
@@ -59,13 +58,15 @@ io.on('connection', function(socket) {
 
             // INSERT UNLESS KEY EXIST:
             // Use the connection
-            connection.query("SELECT * from boards WHERE NAME = " + mysql.escape(thisBoard), function(error, results, fields) {
+                            console.log("abotu to select")
 
+            connection.query("SELECT * FROM boards LEFT JOIN paths on boards.name = paths.board WHERE boards.name = " + mysql.escape(thisBoard), function(error, results, fields) {
+                console.log("in seelct")
                 // check for error
                 if (error) {
                     // all done, release this connection  
                     connection.release();
-                    console.log("connection released err", --connections);
+                    console.log("a connection released err", --connections);
                     throw error;
                 }
 
@@ -76,21 +77,25 @@ io.on('connection', function(socket) {
 
                         console.log("SQL INSERT RESULT?", results);
 
-
-
                         // tell myself the current state of the room from the server
                         socket.emit('log', "joined on insert " + thisBoard);
+
+                        // all done, release this connection  
+                        connection.release();
+                        console.log("connection released", --connections);
                     });
                 } else {
                     // the board did exist, got the results
                     console.log("SQL QUERY RESULT?", results);
 
                     // tell myself the current state of the room from the server
-                    socket.emit('log', "joined on query " + thisBoard);
-                }
-                    // all done, release this connection  
+                    socket.emit('log', "joined on query (existed) " + thisBoard);
+                    socket.emit('boardState', results);
+
+                     // all done, release this connection  
                     connection.release();
                     console.log("connection released", --connections);
+                }
             });
         });
     });
@@ -99,11 +104,8 @@ io.on('connection', function(socket) {
     socket.on('disconnect', function() {
         // users are automatically removed from the room when they disconnect
         console.log('user disconnected');
-
-        // close DB connection
-
     });
-    // serialize?
+
     socket.on('startDraw', function(path, cb) {
         // let p = JSON.parse(path);
         // console.log("start DRAW ->>>>", p, path[0].segments);
@@ -152,7 +154,7 @@ io.on('connection', function(socket) {
                         console.log("!!ALERT!!! idx is null");
                     } else if (qresults[0].idx > -1) {
                         idx = qresults[0].idx;
-                        console.log("-->qresult fine, is", idx);
+                        console.log("--> qresult fine, is", idx);
                         
                     }
 

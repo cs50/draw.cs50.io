@@ -292,6 +292,9 @@
 				// socket stuff
 				socket.on('boardState', function(data){
 					console.log("BOARD STATE", data);
+					for (let line = 0; line < data.length; line++){
+						drawPathFromData(line, data[line].json_string);
+					}
 				});
 
 				socket.on('log', function(data) {
@@ -320,6 +323,11 @@
 					paper.project.layers[defaultLayer].children[index].add({ x: xy[0], y: xy[1] });
 					paper.view.draw();
 				});
+
+				function drawPathFromData(index, json_string){
+					
+					paper.project.layers[defaultLayer].insertChild(index, paper.importJSON(json_string));
+				}
 
 				socket.on('endDraw', function(index) {
 					// don't do anything if this layer hasn't yet been inserted
