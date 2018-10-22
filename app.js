@@ -7,6 +7,7 @@ const mysql = require('mysql');
 const port = 8080;
 var board = [];
 var cnt = 0;
+var connections = 0;
 
 // connect to the database with a pool for effeciency
 var pool = mysql.createPool({
@@ -54,13 +55,19 @@ io.on('connection', function(socket) {
         // get a connection to the DB and see if the board exists
         pool.getConnection(function(err, connection) {
             if (err) throw err; // not connected!
+            console.log("connections", ++connections);
 
             // INSERT UNLESS KEY EXIST:
             // Use the connection
             connection.query("SELECT * from boards WHERE NAME = " + mysql.escape(thisBoard), function(error, results, fields) {
 
                 // check for error
-                if (error) throw error;
+                if (error) {
+                    // all done, release this connection  
+                    connection.release();
+                    console.log("connection released err", --connections);
+                    throw error;
+                }
 
                 // no results, insert the board into the DB
                 if (results.length == 0) {
@@ -69,8 +76,7 @@ io.on('connection', function(socket) {
 
                         console.log("SQL INSERT RESULT?", results);
 
-                        // all done, release this connection  
-                        connection.release();
+
 
                         // tell myself the current state of the room from the server
                         socket.emit('log', "joined on insert " + thisBoard);
@@ -78,11 +84,13 @@ io.on('connection', function(socket) {
                 } else {
                     // the board did exist, got the results
                     console.log("SQL QUERY RESULT?", results);
-                    connection.release();
 
                     // tell myself the current state of the room from the server
                     socket.emit('log', "joined on query " + thisBoard);
                 }
+                    // all done, release this connection  
+                    connection.release();
+                    console.log("connection released", --connections);
             });
         });
     });
@@ -111,17 +119,32 @@ io.on('connection', function(socket) {
         pool.getConnection(function(err, connection) {
             if (err) throw err; // not connected!
 
+            console.log("connection acquired", ++connections);
+
             // start transaction (get last insert for this board)
-            connection.beginTransaction(function(err) {
-                if (err) { throw err; }
+            connection.beginTransaction(function(error) {
+                // check for error
+                if (error) {
+                    // all done, release this connection  
+                    connection.release();
+                    console.log("connection released", --connections);
+                    throw error;
+                }
 
                 connection.query("SELECT MAX(idx) AS idx FROM paths WHERE board = ?", [thisBoard], function(error, qresults, fields) {
 
                     // check for error, cancel the transaction
-                    if (error) { return connection.rollback(function(){ throw error; })}
+                    if (error) { 
+                        return connection.rollback(function(){
+                            connection.release();
+                            console.log("connection released err", --connections);
+                            throw error;
+                        }
+                    )}
+
                     socket.emit('log', qresults);
 
-                    let idx;
+                    var idx;
 
                     // handle first insert 
                     if (qresults == null || qresults[0].idx == null) {
@@ -140,22 +163,36 @@ io.on('connection', function(socket) {
                     // console.log('INSERT INTO paths (board, idx, json_string) VALUES (' + mysql.escape(thisBoard) + ', ' + mysql.escape((idx + 1)) + ', ' + mysql.escape(JSON.stringify(path)) + ')');
                     connection.query('INSERT INTO paths (board, idx, json_string) VALUES (?, ?, ?)', [thisBoard, (idx + 1), JSON.stringify(path)], function(error, iresults, fields) {
                         // check for error, cancel the transaction
-                        if (error) { return connection.rollback(function(){ throw error; })}
+                        if (error) { 
+                            return connection.rollback(function(){
+                                connection.release();
+                                console.log("connection released err", --connections);
+                                throw error;
+                            }
+                        )}
 
-                        // let the front end know what index to use
-                        cb(idx + 1);
-                        console.log("Next index returned ", idx + 1);
-                        
                         connection.commit(function(error){
                             // check for error, cancel the transaction
-                            if (error) { return connection.rollback(function(){ throw error;})}
+                            if (error) { 
+                                return connection.rollback(function(){
+                                    connection.release();
+                                    console.log("connection released err", --connections);
+                                    throw error;
+                                }
+                            )}
 
                             // successful
+                            // let the front end know what index to use
+                            cb(idx + 1);
+                            console.log("Next index returned ", idx + 1);
+                            
                             console.log("StartDraw insert transaction successful at ", (idx + 1));
                             socket.emit('log', "StartDraw insert transaction successful: " +  (idx + 1));
                             socket.to(thisBoard).emit('startDraw', (idx + 1), path);
 
                             connection.release();
+                            // all done, release this connection  
+                            console.log("connection released", --connections);
                         });
                     });  
                 });
@@ -183,12 +220,20 @@ io.on('connection', function(socket) {
         pool.getConnection(function(err, connection) {
             if (err) throw err; // not connected!
 
+            // all done, release this connection  
+            console.log("connection acquired", ++connections);
+
             // UPDATE THE JSON
             // overwrite the previous json since line points will be simplified
             connection.query("UPDATE paths SET json_string = ? WHERE board = ? AND idx = ?", [JSON.stringify(simplifiedPath), thisBoard, index], function(error, results, fields) {
 
-                // check for error
-                if (error) throw error;
+                if (error) { 
+                    return connection.rollback(function(){
+                        connection.release();
+                        console.log("connection released err", --connections);
+                        throw error;
+                    }
+                )}
 
                 // handle erasing
                 if (erase) {
@@ -196,6 +241,10 @@ io.on('connection', function(socket) {
                 } else {
                     socket.to(thisBoard).emit('endDraw', index);
                 }
+
+                // all done, release this connection  
+                connection.release();
+                console.log("connection released", --connections);
             });
         });
     });
