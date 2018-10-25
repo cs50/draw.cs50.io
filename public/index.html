@@ -23,7 +23,7 @@
 
 		<script type="text/javascript" canvas="touch-me">
 		// defaults
-		var socket = io({transports: ['websocket'], query: {room: window.location.pathname}});
+		
 		var path;
 		var hidden = [];
 		var undoAll = false;
@@ -287,6 +287,7 @@
 		// main function
 		$(function() {
 
+			var socket = io({transports: ['websocket'], query: {room: window.location.pathname}});
 			// setup the canvas
 			var canvas = document.getElementById('touch-me');
 			paper.setup(canvas);
