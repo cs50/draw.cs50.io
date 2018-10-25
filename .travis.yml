@@ -6,7 +6,7 @@ deploy:
   secret_access_key: "$AWS_SECRET_ACCESS_KEY"
   region: us-east-1
   app: draw50
-  env: draw50-1
+  env: draw50
   bucket_name: travis50
   on: interactive
 notifications:
