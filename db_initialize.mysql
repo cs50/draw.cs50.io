@@ -5,30 +5,27 @@ SET time_zone = '+00:00';
 SET foreign_key_checks = 0;
 SET sql_mode = 'NO_AUTO_VALUE_ON_ZERO';
 
-SET NAMES utf8mb4;
-
 DROP DATABASE IF EXISTS `draw50`;
-CREATE DATABASE `draw50` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */;
+CREATE DATABASE `draw50` /*!40100 DEFAULT CHARACTER SET latin1 */;
 USE `draw50`;
 
 DROP TABLE IF EXISTS `boards`;
 CREATE TABLE `boards` (
-  `name` varchar(240) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `owner` varchar(240) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  PRIMARY KEY (`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `name` varchar(240) NOT NULL,
+  `owner` varchar(240) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
 DROP TABLE IF EXISTS `paths`;
 CREATE TABLE `paths` (
-  `board` varchar(240) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `board` varchar(240) NOT NULL,
   `idx` int(240) unsigned NOT NULL,
   `id` int(240) unsigned NOT NULL AUTO_INCREMENT,
-  `json_string` json NOT NULL,
+  `json_string` text NOT NULL,
   PRIMARY KEY (`id`),
   KEY `board` (`board`),
   KEY `idx` (`idx`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
--- 2018-10-12 03:18:57
+-- 2018-10-26 02:23:34
