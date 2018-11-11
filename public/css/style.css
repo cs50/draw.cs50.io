@@ -52,8 +52,9 @@ button.dot {
 }
 
 button.corner {
-	height: 100px;
-	width: 100px;
+	height: 6rem;
+	width: 6rem;
+	color:green;
 }
 
 button.hidden {
@@ -77,8 +78,6 @@ button.top-right {
 button.bottom-left {
 	bottom: 0px;
 	left: 0px;
-	height: 200px !important;
-	width: 200px !important;
 }
 
 .menuButton {
@@ -127,11 +126,28 @@ button.bottom-right {
 }
 
 div#customMenu {
-	height: 40px;
-	width: 500px;
+	width:45%;
+	height:2.5rem;
 	background-color: black;
 	position: absolute;
+	text-align:center;
 	bottom: 0px;
-	left: 5%;
+	left: 0;
+	right:0;
+	margin-left:auto;
+	margin-right:auto;
 	display: none;
+}
+
+div#menuSwipeDetector {
+	width:80%;
+	height:5rem;
+	background-color: green;
+	position: absolute;
+	bottom: 0px;
+	left: 0;
+	right:0;
+	margin-left:auto;
+	margin-right:auto;
+	background: transparent !important;
 }

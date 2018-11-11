@@ -1,0 +1,31 @@
+-- Adminer 4.6.3 MySQL dump
+
+SET NAMES utf8;
+SET time_zone = '+00:00';
+SET foreign_key_checks = 0;
+SET sql_mode = 'NO_AUTO_VALUE_ON_ZERO';
+
+DROP DATABASE IF EXISTS `draw50`;
+CREATE DATABASE `draw50` /*!40100 DEFAULT CHARACTER SET latin1 */;
+USE `draw50`;
+
+DROP TABLE IF EXISTS `boards`;
+CREATE TABLE `boards` (
+  `name` varchar(240) NOT NULL,
+  `owner` varchar(240) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+DROP TABLE IF EXISTS `paths`;
+CREATE TABLE `paths` (
+  `board` varchar(240) NOT NULL,
+  `idx` int(240) unsigned NOT NULL,
+  `id` int(240) unsigned NOT NULL AUTO_INCREMENT,
+  `json_string` text NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `board` (`board`),
+  KEY `idx` (`idx`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+-- 2018-10-26 02:23:34
