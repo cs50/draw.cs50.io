@@ -68,6 +68,24 @@
 		// prevent right click to avoid pop-up menu
 		document.addEventListener('contextmenu', event => event.preventDefault());
 
+		// // detect pointer type (for debugging)
+		// document.addEventListener('pointerdown', function(event) {
+		//   // Call the appropriate pointer type handler
+		//   switch (event.pointerType) {
+		//     case 'mouse':
+		//       console.log("mouse")
+		//       break;
+		//     case 'pen':
+		//       console.log("pen")
+		//       break;
+		//     case 'touch':
+		//       console.log("touch")
+		//       break;
+		//     default:
+		//       console.log(`pointerType ${event.pointerType} is not suported`);
+		//   }
+		// }, false);
+
 		function undo(fromSocket = false) {
 			// stop if there is nothing left to undo
 			if (paper.project.layers[defaultLayer].children.length < 1) {
@@ -726,7 +744,7 @@
 				lastNumPointers = ev.maxPointers;
 
 				// override evMaxPointers for surface pen erase event
-				if (ev.srcEvent.buttons === 4) {
+				if (ev.srcEvent.buttons === 32) {
 					evMaxPointers = 2
 				}
 
@@ -758,7 +776,7 @@
 				}
 
 				// override lastAction for surface pen erase event
-				if (ev.srcEvent.buttons === 4) {
+				if (ev.srcEvent.buttons === 32) {
 					lastAction = "erase"
 				}
 
