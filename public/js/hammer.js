@@ -894,6 +894,14 @@ inherit(PointerEventInput, Input, {
                 store.push(ev);
                 storeIndex = store.length - 1;
             }
+        } else if (eventType & INPUT_START && (ev.buttons === 4 || isTouch)) {
+            // accepting alternative input method
+            // e.g., ev.buttons === 32 will be true if surface pen erase detected 
+            console.log("simulating erase action")
+            if (storeIndex < 0) {
+                store.push(ev);
+                storeIndex = store.length - 1;
+            }
         } else if (eventType & (INPUT_END | INPUT_CANCEL)) {
             removePointer = true;
         }

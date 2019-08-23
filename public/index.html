@@ -25,7 +25,7 @@
 
 		<script type="text/javascript" canvas="touch-me">
 		// defaults
-		
+
 		var path;
 		var hidden = [];
 		var undoAll = false;
@@ -74,7 +74,7 @@
 				return;
 			}
 
-		
+
 			if (socketsActive && !fromSocket) {
 				socket.emit('undo', paper.project.layers[defaultLayer].children.length - 1, function(success) {
 					if (success) {
@@ -336,7 +336,7 @@
 				});
 
 				function drawPathFromData(index, json_string){
-					
+
 					paper.project.layers[defaultLayer].insertChild(index, paper.importJSON(json_string));
 				}
 
@@ -388,7 +388,7 @@
 					paper.view.draw();
 				})
 
-				
+
 			};
 
 			// display default size/color of the stroke in the menu
@@ -443,14 +443,14 @@
 
 			// setup hammer.js for the main canvas
 			mc = new Hammer.Manager(canvas);
-			
+
 			// add listener (else we won't get nearly as many events)
 			var pan = new Hammer.Pan({ pointers: 1 });
 			mc.add(pan);
 
 
 			/*
-			 *	 ACTIONS RELATED TO DRAWING 
+			 *	 ACTIONS RELATED TO DRAWING
 			 */
 
 
@@ -493,7 +493,7 @@
 					// console.log("middleDraw", lastIndex, paper.project.layers[defaultLayer].children[lastIndex]);
 					// console.log("start middle draw");
 				}
-				console.log("middleDraw " + lastIndex, ev.center);
+				// console.log("middleDraw " + lastIndex, ev.center);
 				// take action on the pointer moving
 
 				// wait to get our index before touching anything
@@ -539,9 +539,9 @@
 			}
 
 			/*
-			 *	 ACTIONS RELATED TO ERASING 
+			 *	 ACTIONS RELATED TO ERASING
 			 */
-			
+
 			function startErase(ev, bigErase = false) {
 				if (debug) {
 					console.log("startErase", bigErase);
@@ -560,7 +560,7 @@
 						strokeCap: 'round',
 						fullySelected: false
 					});
-					
+
 				} else {
 					// remember that this is the last action that we started
 					lastAction = 'bigErase';
@@ -615,15 +615,15 @@
 				}
 			}
 
-			function endErase(ev, bigErase = false) {	
+			function endErase(ev, bigErase = false) {
 				if (debug) {
 					console.log("endErase " + lastIndex + " isLastIndex+end(Draw)");
-				}	
+				}
 
 				// wait to get our index before touching anything
 				if (lastIndex == -1) {
 					return;
-				}		
+				}
 
 				if (socketsActive) {
 					socket.emit('endDraw', lastIndex, paper.project.layers[defaultLayer].children[lastIndex], true);
@@ -637,11 +637,11 @@
 				finishErase(lastIndex);
 			}
 
-			
+
 
 
 			/*
-			 *	 ACTIONS RELATED TO PANNING 
+			 *	 ACTIONS RELATED TO PANNING
 			 */
 
 			 function startPan(ev) {
@@ -721,9 +721,16 @@
 			});
 
 			function startFirstAction(ev) {
+
+				evMaxPointers = ev.maxPointers;
 				lastNumPointers = ev.maxPointers;
 
-				switch (ev.maxPointers) {
+				// override evMaxPointers for surface pen erase event
+				if (ev.srcEvent.buttons === 4) {
+					evMaxPointers = 2
+				}
+
+				switch (evMaxPointers) {
 					case 1:
 						startDraw(ev);
 					break;
@@ -750,6 +757,11 @@
 					return;
 				}
 
+				// override lastAction for surface pen erase event
+				if (ev.srcEvent.buttons === 4) {
+					lastAction = "erase"
+				}
+
 				switch (lastAction) {
 					case 'draw':
 						middleDraw(ev);
@@ -757,6 +769,7 @@
 
 					case 'bigErase':
 					case 'erase':
+
 						middleErase(ev);
 					break;
 
