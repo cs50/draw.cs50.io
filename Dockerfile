@@ -1,4 +1,4 @@
-FROM cs50/server
+FROM cs50/server:focal
 
 # Default port (to match CS50 IDE)
 EXPOSE 8080
