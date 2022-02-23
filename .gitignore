@@ -1,4 +1,4 @@
-package-lock.json
 *.DS*
 tmp/*
-# node_modules
+db
+node_modules
