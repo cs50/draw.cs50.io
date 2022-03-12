@@ -9,5 +9,5 @@ jobs:
       with:
         aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        app_name: draw50
-        env_name: draw50
+        app_name: draw-cs50-io
+        env_name: draw-cs50-io
