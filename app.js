@@ -4,7 +4,7 @@ const io = require('socket.io')(http);
 const path = require('path');
 const mysql = require('mysql');
 
-const port = 8080;
+const port = process.env.PORT || 8080;
 var board = [];
 var cnt = 0;
 var connections = 0;
@@ -19,9 +19,10 @@ var pool = mysql.createPool({
 });
 
 
-app.get('*', function(req, res) {
+// Express 5 (path-to-regexp v8) requires wildcards to be named; `/{*splat}` matches `/` and every sub-path
+app.get('/{*splat}', function(req, res) {
     // req.url
-    res.sendFile(path.join(__dirname + '/public/index.html'))
+    res.sendFile(path.join(__dirname, 'public', 'index.html'))
 });
 
 io.on('connection', function(socket) {
@@ -45,9 +46,12 @@ io.on('connection', function(socket) {
 
 
     // we have a specifc board, subscribe the user to the room
-    socket.join(thisBoard, function() {
+    // Socket.IO v3+: join() no longer accepts a callback (it is synchronous with the default adapter),
+    // so run the post-join logic directly instead of passing it as a callback that would never fire.
+    socket.join(thisBoard);
+    (function onJoined() {
         console.log("in thisBoard", thisBoard)
-        console.log("socket is in rooms", socket.rooms);
+        console.log("socket is in rooms", [...socket.rooms]);
 
         // get a connection to the DB and see if the board exists
         pool.getConnection(function(err, connection) {
@@ -96,7 +100,7 @@ io.on('connection', function(socket) {
                 }
             });
         });
-    });
+    })();
 
 
     socket.on('disconnect', function() {
